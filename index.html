@@ -145,6 +145,8 @@ LDA ($40),Y      ; Indirect Indexed (Y)
       opcodeMap[m][modes[i]]=i;
     }
 
+     let baseAddress = 0xC000; // * = address set here
+     
   window.asm=()=>{
     let lines=document.getElementById("asmIn").value.split("\n"),labels={},pc=0;
 
@@ -180,7 +182,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
         let lbl=op.v.toUpperCase();
         if(labels[lbl]===undefined){alert(`No label: ${lbl}`);return;}
         op.m=(mn.toUpperCase().startsWith("B")&&mn.toUpperCase()!="BIT")?BRA:ABS;
-        op.v=labels[lbl];
+        op.v = baseAddress + labels[lbl]; // Fix address according to * = baseAddress
       }
       let opc=opcodeMap[mn.toUpperCase()]?.[op.m];
       if(opc===undefined){alert(`Bad inst: ${mn} ${opstr}`);return;}
@@ -200,7 +202,6 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   };
 
 window.dis = () => {
-  let baseAddress = 0xC000; // * = address set here
   let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
   let pc = 0, lst = [];
   lst.push(`* = $${baseAddress.toString(16).padStart(4, "0").toUpperCase()}`);
