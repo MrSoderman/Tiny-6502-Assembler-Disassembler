@@ -31,11 +31,12 @@ LDX $40,Y        ; Zero Page,Y
 ASL $0A          ; Accumulator
 ; BEQ here       ; Relative (labels TODO: BUGGY with the 8 branches and indirect JMP)
 STA $0200        ; Absolute
+STA got
 STA $2000,X      ; Absolute,X
 here: 
 LDA $1000,Y      ; Absolute,Y
 JMP ($FFFF)      ; Indirect
-LDA ($40,X)      ; Indexed Indirect (X)
+got: LDA ($40,X) ; Indexed Indirect (X)
 LDA ($40),Y      ; Indirect Indexed (Y)
 </textarea>
 <button onclick=asm()>Assemble</button>
@@ -43,8 +44,9 @@ LDA ($40),Y      ; Indirect Indexed (Y)
 </div>
 <div class=container>
 <label for=binIn>Disassembly Input:</label>
-<textarea id=binIn rows=8 spellcheck=false>EA A9 01 A5 40 20 00 00 95 40 B6 40 06 0A 8D 00
-02 9D 00 20 B9 00 10 6C FF FF A1 40 B1 40</textarea>
+<textarea id=binIn rows=8 spellcheck=false>EA A9 01 A5 40 20 17 00 95 40 B6 40 06 0A 8D 00
+02 8D 1D 00 9D 00 20 B9 00 10 6C FF FF A1 40 B1
+40</textarea>
 <button onclick=dis()>Disassemble</button>
 <pre id=binOut aria-live=polite role=region></pre>
 </div>
@@ -108,9 +110,9 @@ LDA ($40),Y      ; Indirect Indexed (Y)
                BRA,INDY,IMP,IMP,ZPX,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP];              
 
                // Do some manual temporary patching
-               modes[0x4C] = ABS; modes[0x6C] = IND16; modes[0xD4] = IMP; modes[0xDC] = IMP;
-               modes[0xF4] = IMP; modes[202] = IMP; modes[0x18] = IMP;  modes[0x38] = IMP; modes[0xEA] = IMP; // NOP
-
+               modes[0x4C] = ABS; modes[0x6C] = IND16; modes[0xD4] = IMP; modes[0xDC] = IMP; modes[0xF4] = IMP; modes[202] = IMP; modes[0x18] = IMP;  modes[0x38] = IMP; modes[0xEA] = IMP; // NOP
+               modes[0x6A] = IMP; modes[0x2A] = IMP; modes[0x0A] = IMP; modes[0x4A] = IMP; modes[0x48]=IMP;modes[0x68]=IMP;modes[0x08]=IMP;modes[0x28]=IMP;modes[0x18]=IMP;modes[0x38]=IMP;modes[0x58]=IMP;modes[0x78]=IMP;modes[0xB8]=IMP;modes[0xD8]=IMP;modes[0xF8]=IMP;modes[0xC8]=IMP;modes[0xE8]=IMP;modes[0x88]=IMP;modes[0xCA]=IMP;modes[0x8A]=IMP;modes[0xAA]=IMP;modes[0x98]=IMP;modes[0xA8]=IMP;modes[0x9A]=IMP;modes[0xBA]=IMP;modes[0xEA]=IMP;modes[0x00]=IMP;modes[0x40]=IMP;modes[0x60]=IMP;modes[0x0A]=IMP;modes[0x4A]=IMP;modes[0x2A]=IMP;modes[0x6A]=IMP;
+    
     const len = m => m < 3 ? 1 : m < 9 ? 2 : 3;
     const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
 
