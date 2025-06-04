@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tiny 6502 Assembler/Disassembler</title>
+
+<style>
+body { background:#111; color:#0f0; font-family:monospace; padding:1em; max-width:900px; margin:auto; text-align:center; }
+textarea, pre { width:100%; max-width:800px; background:#222; color:#0f0; border:1px solid #555; padding:1em; box-sizing:border-box; font-family:monospace; resize:vertical; margin-bottom:1em; text-align:left; font-size:1rem; }
+button { background:#00aaff; color:#fff; border:none; padding:0.5em 1.5em; margin:1em auto; cursor:pointer; transition:0.3s; font-size:1rem; border-radius:4px; }
+button:hover { background:#0088cc; }
+label { font-weight:bold; margin-bottom:0.5em; text-align:left; width:100%; max-width:800px; font-size:1rem; }
+.container { margin-bottom:2em; display:flex; flex-direction:column; align-items:center; }
+@media (max-width:600px) { body { padding:1em; } textarea, pre { font-size:0.9rem; } button { font-size:0.9rem; padding:0.4em 1em; } label { font-size:0.9rem; } }
+
+</style>
+
+</head>
+<body>
+<h1>Tiny 6502 Assembler/Disassembler</h1>
+<div class=container>
+<label for=asmIn>Assembly Input:</label>
+<textarea id="asmIn" rows="20" spellcheck="false" autofocus>
+NOP              ; Implied
+LDA #$01         ; Immediate
+LDA $40          ; Zero Page
+JSR here:
+STA $40,X        ; Zero Page,X
+LDX $40,Y        ; Zero Page,Y
+ASL $0A          ; Accumulator
+; BEQ here       ; Relative (labels TODO: BUGGY with the 8 branches and indirect JMP)
+STA $0200        ; Absolute
+STA $2000,X      ; Absolute,X
+here: 
+LDA $1000,Y      ; Absolute,Y
+JMP ($FFFF)      ; Indirect
+LDA ($40,X)      ; Indexed Indirect (X)
+LDA ($40),Y      ; Indirect Indexed (Y)
+</textarea>
+<button onclick=asm()>Assemble</button>
+<pre id=asmOut aria-live=polite role=region></pre>
+</div>
+<div class=container>
+<label for=binIn>Disassembly Input:</label>
+<textarea id=binIn rows=8 spellcheck=false>EA A9 01 A5 40 20 00 00 95 40 B6 40 06 0A 8D 00
+02 9D 00 20 B9 00 10 6C FF FF A1 40 B1 40</textarea>
+<button onclick=dis()>Disassemble</button>
+<pre id=binOut aria-live=polite role=region></pre>
+</div>
+<script>
+
+(() => {
+  // Supports all 56 official 6502 *instructions* (151 opcodes including addressing modes).
+  // The 105 unoffical opcodes are not covered, but can easily be included by changing the ops and mode arrays.
+
+  // The 13 addressing modes of 6502 (all included in example code)
+  const IMP=0,   // Implied
+        IMPA=1,  // Accumulator (really the same as implied for an assembler/disassmbler)
+        IMM=3,   // Immediate
+        ZP=4,    // Zero Page
+        ZPX=5,   // Zero Page,X
+        ZPY=6,   // Zero Page,Y
+        INDX=7,  // (Indirect,X)
+        INDY=8,  // (Indirect),Y
+        ABS=9,   // Absolute - used by many opcodes including JMP and JSR
+        ABSX=10, // Absolute,X
+        ABSY=11, // Absolute,Y
+        IND16=12,// (Absolute) — only used by JMP
+        BRA=2;   // Relative - Used only by the 8 branches
+
+ // The 56 official opcodes of the 6502
+  let ops = [
+  "BRK","ORA","*","*","*","ORA","ASL","*","PHP","ORA","ASL","*","*","ORA","ASL","*",
+  "BPL","ORA","*","*","*","ORA","ASL","*","CLC","ORA","*","*","*","ORA","ASL","*",
+  "JSR","AND","*","*","BIT","AND","ROL","*","PLP","AND","ROL","*","BIT","AND","ROL","*", 
+  "BMI","AND","*","*","*","AND","ROL","*","SEC","AND","*","*","*","AND","ROL","*",
+  "RTI","EOR","*","*","*","EOR","LSR","*","PHA","EOR","LSR","*","JMP","EOR","LSR","*",
+  "BVC","EOR","*","*","*","EOR","LSR","*","CLI","EOR","*","*","*","EOR","LSR","*",
+  "RTS","ADC","*","*","*","ADC","ROR","*","PLA","ADC","ROR","*","JMP","ADC","ROR","*",
+  "BVS","ADC","*","*","*","ADC","ROR","*","SEI","ADC","*","*","*","ADC","ROR","*",
+  "*","STA","*","*","STY","STA","STX","*","DEY","*","TXA","*","STY","STA","STX","*",
+  "BCC","STA","*","*","STY","STA","STX","*","TYA","STA","TXS","*","*","STA","*","*",
+  "LDY","LDA","LDX","*","LDY","LDA","LDX","*","TAY","LDA","TAX","*","LDY","LDA","LDX","*",
+  "BCS","LDA","*","*","LDY","LDA","LDX","*","CLV","LDA","TSX","*","LDY","LDA","LDX","*",
+  "CPY","CMP","*","*","CPY","CMP","DEC","*","INY","CMP","DEX","*","CPY","CMP","DEC","*",
+  "BNE","CMP","*","*","*","CMP","DEC","*","CLD","CMP","*","*","*","CMP","DEC","*",
+  "CPX","SBC","*","*","CPX","SBC","INC","*","INX","SBC","NOP","*","CPX","SBC","INC","*",
+  "BEQ","SBC","*","*","*","SBC","INC","*","SED","SBC","*","*","*","SBC","INC","*"
+];
+
+  // Map the addressing modes to the opcodes
+  let modes=[IMP,INDX,IMP,IMP,IMP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,IMP,ABS,ABS,IMP,
+               BRA,INDY,IMP,IMP,IMP,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,IMP,ABSX,ABSX,IMP,
+               ABS,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
+               BRA,INDY,IMP,IMP,IMP,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,IMP,ABSX,ABSX,IMP,
+               IMP,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,IND16,ABS,ABS,IMP,
+               BRA,INDY,IMP,IMP,ZP,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP,
+               IMP,INDX,IMP,IMP,IMP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
+               BRA,INDY,IMP,IMP,IMP,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,IMP,ABSX,ABSX,IMP,
+               IMP,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMP,IMP,IMP,ABS,ABS,ABS,IMP,
+               BRA,INDY,IMP,IMP,ZPX,ZPX,ZPY,IMP,IMP,ABSY,IMP,IMP,IMP,ABSX,IMP,IMP,
+               IMM,INDX,IMM,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
+               BRA,INDY,IMP,IMP,ZPX,ZPX,ZPY,IMP,IMP,ABSY,IMP,IMP,ABSX,ABSX,ABSY,IMP,
+               IMM,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
+               BRA,INDY,IMP,IMP,ZPX,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP,
+               IMM,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
+               BRA,INDY,IMP,IMP,ZPX,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP];              
+
+               // Do some manual temporary patching
+               modes[0x4C] = ABS; modes[0x6C] = IND16; modes[0xD4] = IMP; modes[0xDC] = IMP;
+               modes[0xF4] = IMP; modes[202] = IMP; modes[0x18] = IMP;  modes[0x38] = IMP; modes[0xEA] = IMP; // NOP
+
+    const len = m => m < 3 ? 1 : m < 9 ? 2 : 3;
+    const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
+
+    function pOp(s) {
+    s = s.trim().replace(/\$/g, '');
+    if (!s) return { m: IMP };
+    if (s === 'A') return { m: IMPA };
+    if (s[0] === '#') return { m: IMM, v: parseInt(s.slice(1), 16) };
+    let m;
+    if ((m = s.match(/^\(([\da-f]+)\),Y$/i))) return { m: INDY, v: parseInt(m[1], 16) };
+    if ((m = s.match(/^\(([\da-f]+),X\)$/i))) return { m: INDX, v: parseInt(m[1], 16) };
+    if ((m = s.match(/^\(([\da-f]+)\)$/i))) return { m: IND16, v: parseInt(m[1], 16) };
+    // Test
+    // if ((m = s.match(/^\((\w+)\)$/)))
+    // return { m: IND16, v: m[1] }; // just store label name
+    if ((m = s.match(/^([\da-f]+),([XY])$/i))) {
+      let v = parseInt(m[1], 16);
+      return { m: m[2] === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY), v };
+    }
+    if (/^[a-z_.$][\w.$]*$/i.test(s)) return { m: null, v: s };
+    let v = parseInt(s, 16);
+    return { m: v <= 0xFF ? ZP : ABS, v };
+  }
+
+    const opcodeMap={};
+    for(let i=0;i<256;i++){
+      let m=ops[i];
+      if(m==="*")continue;
+      if(!opcodeMap[m])opcodeMap[m]=[];
+      opcodeMap[m][modes[i]]=i;
+    }
+
+  window.asm=()=>{
+    let lines=document.getElementById("asmIn").value.split("\n"),labels={},pc=0;
+
+    // 1st pass (labels)                     // Need to fix and simplify
+    for(let l of lines){                     // iterate over each line in source
+      l=l.split(";")[0].trim();              // remove comments and whitespace
+      if(!l)continue;                        // skip empty lines
+      let m=l.match(/^([A-Z0-9_.$]+):/i);    // check for label at line start
+      if(m){labels[m[1].toUpperCase()]=pc;   // save label address
+          l=l.slice(m[0].length).trim();     // remove label from line
+          if(!l)continue;}                   // skip if nothing left
+      let [mn,...ops]=l.split(/\s+/);        // split mnemonic and operands
+      let opstr=ops.join(" ");               // join operands back to string
+      let {m:am}=pOp(opstr);                 // parse addressing mode
+      if(am==null)am=ABS;                    // default mode ABS if null
+      if(!opcodeMap[mn.toUpperCase()]        // check if mnemonic & mode valid
+        ||opcodeMap[mn.toUpperCase()][am]===undefined){alert(`Bad inst: ${mn} ${opstr}`);return;}
+      pc+=len(am);                           // increment program counter
+    }
+
+    // 2nd pass (encode)
+    pc=0;
+    let bytes=[];
+    for(let l of lines){
+      l=l.split(";")[0].trim();
+      if(!l)continue;
+      let m=l.match(/^([A-Z0-9_.$]+):/i);
+      if(m){l=l.slice(m[0].length).trim();if(!l)continue;}
+      let [mn,...ops]=l.split(/\s+/);
+      let opstr=ops.join(" ");
+      let op=pOp(opstr);
+      if(op.m==null){
+        let lbl=op.v.toUpperCase();
+        if(labels[lbl]===undefined){alert(`No label: ${lbl}`);return;}
+        op.m=(mn.toUpperCase().startsWith("B")&&mn.toUpperCase()!="BIT")?BRA:ABS;
+        op.v=labels[lbl];
+      }
+      let opc=opcodeMap[mn.toUpperCase()]?.[op.m];
+      if(opc===undefined){alert(`Bad inst: ${mn} ${opstr}`);return;}
+      bytes[pc++]=opc;
+      switch (op.m) { // -----------------------------------------------------------------------------------
+      case IMM: case ZP: case ZPX: case ZPY: case INDX: case INDY: bytes[pc++] = op.v & 0xFF; break;
+      case ABS: case ABSX: case ABSY: case IND16: bytes[pc++] = op.v & 0xFF; bytes[pc++] = op.v >> 8; break;
+      case BRA:
+        let off = op.v - (pc + 1);
+        if (off < -128 || off > 127) { alert(`Branch out of range at ${hx(pc - 1)}`); return; }
+        bytes[pc++] = off & 0xFF; break;
+    } // ---------------------------------------------------------------------------------------------------
+    }
+    let hexBytes = bytes.slice(0, pc).map(b => hx(b)); lines = [];
+    for (let i = 0; i < hexBytes.length; i += 16) { lines.push(hexBytes.slice(i, i + 16).join(" ")); }
+    document.getElementById("asmOut").textContent = lines.join("\n");
+  };
+
+window.dis = () => {
+  let baseAddress = 0xC000; // * = address set here
+  let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
+  let pc = 0, lst = [];
+  lst.push(`* = $${baseAddress.toString(16).padStart(4, "0").toUpperCase()}`);
+  while (pc < bin.length) {
+    let addr = baseAddress + pc;
+    let o = bin[pc], m = modes[o], mn = ops[o];
+    let bytes = [o];
+    if (mn === "*") {
+      lst.push(`${addr.toString(16).padStart(4, "0").toUpperCase()}   ${hx(o).padStart(2, "0")}                   .db $${hx(o)}`);
+      pc++; // disasm.push(`.db $${toHex(b)}  ; unknown or incomplete`);
+      continue;
+    }
+    let ln = len(m);
+    if (pc + ln - 1 >= bin.length) {
+      lst.push(`${addr.toString(16).padStart(4, "0").toUpperCase()}   ${hx(o).padStart(2, "0")}                   .db $${hx(o)}`);
+      pc++;
+      continue;
+    }
+    for (let i = 1; i < ln; i++) bytes.push(bin[pc + i]);
+    let opd = "";
+    switch (m) {
+      case IMP: opd = ""; break;
+      case IMM: opd = "#$" + hx(bin[pc + 1]); break;
+      case ZP: opd = "$" + hx(bin[pc + 1]); break;
+      case ZPX: opd = "$" + hx(bin[pc + 1]) + ",X"; break;
+      case ZPY: opd = "$" + hx(bin[pc + 1]) + ",Y"; break;
+      case ABS: opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2); break;
+      case ABSX: opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ",X"; break;
+      case ABSY: opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ",Y"; break;
+      case INDX: opd = "($" + hx(bin[pc + 1]) + ",X)"; break;
+      case INDY: opd = "($" + hx(bin[pc + 1]) + "),Y"; break;
+      case IND16: opd = "($" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ")"; break;
+      case BRA:
+        let off = bin[pc + 1];
+        if (off & 0x80) off = off - 0x100;
+        opd = "$" + hx(baseAddress + pc + 2 + off, 4);
+        break;
+    }
+    // Convert bytes to hex string for left side
+    let hexBytes = bytes.map(b => hx(b).padStart(2, "0")).join(" ");
+    let paddedHex = hexBytes.padEnd(10, " ");  // Padding to keep everything aligned
+    lst.push(`${addr.toString(16).padStart(4, "0").toUpperCase()}   ${paddedHex}        ${mn}${opd ? " " + opd : ""}`);
+    pc += ln;
+  }
+  document.getElementById("binOut").textContent = lst.join("\n");
+};
+
+})();
+</script>
+</body></html>
