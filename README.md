@@ -21,8 +21,9 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 
 ## Known Issues
 
-- Multiple `* = $xxxx` directives are not supported yet; only the first base address is respected. Using multiple base address resets may cause incorrect assembly or disassembly.
+- Multiple * = $xxxx directives are currently unsupported; only the first base address directive is applied. Using multiple base address resets may result in incorrect assembly or disassembly.
 
+- Labels placed in the middle of instructions are not correctly parsed, leading to incorrect operand address resolution.
 
 ## Screenshot
 
