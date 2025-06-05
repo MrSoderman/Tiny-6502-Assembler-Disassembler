@@ -13,7 +13,6 @@ button:hover { background:#0088cc; }
 label { font-weight:bold; margin-bottom:0.5em; text-align:left; width:100%; max-width:800px; font-size:1rem; }
 .container { margin-bottom:2em; display:flex; flex-direction:column; align-items:center; }
 @media (max-width:600px) { body { padding:1em; } textarea, pre { font-size:0.9rem; } button { font-size:0.9rem; padding:0.4em 1em; } label { font-size:0.9rem; } }
-
 </style>
 
 </head>
@@ -51,7 +50,6 @@ LDA ($40),Y      ; Indirect Indexed (Y)
 <pre id=binOut aria-live=polite role=region></pre>
 </div>
 <script>
-
 (() => {
   // Supports all 56 official 6502 *instructions* (151 opcodes including addressing modes).
   // The 105 unoffical opcodes are not covered, but can easily be included by changing the ops and modes arrays.
@@ -108,12 +106,11 @@ LDA ($40),Y      ; Indirect Indexed (Y)
                BRA,INDY,IMP,IMP,ZPX,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP,
                IMM,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
                BRA,INDY,IMP,IMP,ZPX,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP];              
-
                // Do some manual temporary patching
                modes[0x4C] = ABS; modes[0x6C] = IND16; modes[0xD4] = IMP; modes[0xDC] = IMP; modes[0xF4] = IMP; modes[202] = IMP; modes[0x18] = IMP;  modes[0x38] = IMP; modes[0xEA] = IMP; // NOP
                modes[0x6A] = IMP; modes[0x2A] = IMP; modes[0x0A] = IMP; modes[0x4A] = IMP; modes[0x48]=IMP;modes[0x68]=IMP;modes[0x08]=IMP;modes[0x28]=IMP;modes[0x18]=IMP;modes[0x38]=IMP;modes[0x58]=IMP;modes[0x78]=IMP;modes[0xB8]=IMP;modes[0xD8]=IMP;modes[0xF8]=IMP;modes[0xC8]=IMP;modes[0xE8]=IMP;modes[0x88]=IMP;modes[0xCA]=IMP;modes[0x8A]=IMP;modes[0xAA]=IMP;modes[0x98]=IMP;modes[0xA8]=IMP;modes[0x9A]=IMP;modes[0xBA]=IMP;modes[0xEA]=IMP;modes[0x00]=IMP;modes[0x40]=IMP;modes[0x60]=IMP;modes[0x0A]=IMP;modes[0x4A]=IMP;modes[0x2A]=IMP;modes[0x6A]=IMP;
-    
-    const len = m => m < 3 ? 1 : m < 9 ? 2 : 3;
+
+    const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
     const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
 
     function pOp(s) {
@@ -125,9 +122,6 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     if ((m = s.match(/^\(([\da-f]+)\),Y$/i))) return { m: INDY, v: parseInt(m[1], 16) };
     if ((m = s.match(/^\(([\da-f]+),X\)$/i))) return { m: INDX, v: parseInt(m[1], 16) };
     if ((m = s.match(/^\(([\da-f]+)\)$/i))) return { m: IND16, v: parseInt(m[1], 16) };
-    // Test
-    // if ((m = s.match(/^\((\w+)\)$/)))
-    // return { m: IND16, v: m[1] }; // just store label name
     if ((m = s.match(/^([\da-f]+),([XY])$/i))) {
       let v = parseInt(m[1], 16);
       return { m: m[2] === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY), v };
@@ -146,10 +140,8 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     }
 
      let baseAddress = 0xC000; // * = address set here
-     
   window.asm=()=>{
     let lines=document.getElementById("asmIn").value.split("\n"),labels={},pc=0;
-
     // 1st pass (labels)                     // Need to fix and simplify
     for(let l of lines){                     // iterate over each line in source
       l=l.split(";")[0].trim();              // remove comments and whitespace
@@ -160,13 +152,18 @@ LDA ($40),Y      ; Indirect Indexed (Y)
           if(!l)continue;}                   // skip if nothing left
       let [mn,...ops]=l.split(/\s+/);        // split mnemonic and operands
       let opstr=ops.join(" ");               // join operands back to string
-      let {m:am}=pOp(opstr);                 // parse addressing mode
-      if(am==null)am=ABS;                    // default mode ABS if null
+    let {m: am} = pOp(opstr);  // parse addressing mode
+    if (am == null) {
+      if (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") {
+        am = BRA;  // branch instructions get REL (BRA) mode
+      } else {
+        am = ABS;  // others get ABS by default
+      }
+    }
       if(!opcodeMap[mn.toUpperCase()]        // check if mnemonic & mode valid
-        ||opcodeMap[mn.toUpperCase()][am]===undefined){alert(`Bad inst: ${mn} ${opstr}`);return;}
+        ||opcodeMap[mn.toUpperCase()][am]===undefined){alert(`2 Bad inst: ${mn} ${opstr}`);return;} // HERE IT HTINKS Bxx LABEL is wgon
       pc+=len(am);                           // increment program counter
     }
-
     // 2nd pass (encode)
     pc=0;
     let bytes=[];
@@ -185,22 +182,28 @@ LDA ($40),Y      ; Indirect Indexed (Y)
         op.v = baseAddress + labels[lbl]; // Fix address according to * = baseAddress
       }
       let opc=opcodeMap[mn.toUpperCase()]?.[op.m];
-      if(opc===undefined){alert(`Bad inst: ${mn} ${opstr}`);return;}
+      if(opc===undefined){alert(`1 Bad inst: ${mn} ${opstr}`);return;}
       bytes[pc++]=opc;
       switch (op.m) { // -----------------------------------------------------------------------------------
       case IMM: case ZP: case ZPX: case ZPY: case INDX: case INDY: bytes[pc++] = op.v & 0xFF; break;
       case ABS: case ABSX: case ABSY: case IND16: bytes[pc++] = op.v & 0xFF; bytes[pc++] = op.v >> 8; break;
-      case BRA:
-        let off = op.v - (pc + 1);
-        if (off < -128 || off > 127) { alert(`Branch out of range at ${hx(pc - 1)}`); return; }
-        bytes[pc++] = off & 0xFF; break;
+      case BRA: {
+        let target = op.v;               // Label address
+        let offset = target - (pc + 1);
+        offset=0;
+        if (offset < -128 || offset > 127) {
+          alert(`Branch out of range at ${hx(pc - 1)}`);
+          return;
+        }
+        bytes[pc++] = offset & 0xFF;
+        break;
+      }
     } // ---------------------------------------------------------------------------------------------------
     }
     let hexBytes = bytes.slice(0, pc).map(b => hx(b)); lines = [];
     for (let i = 0; i < hexBytes.length; i += 16) { lines.push(hexBytes.slice(i, i + 16).join(" ")); }
     document.getElementById("asmOut").textContent = lines.join("\n");
   };
-
 window.dis = () => {
   let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
   let pc = 0, lst = [];
@@ -248,7 +251,6 @@ window.dis = () => {
   }
   document.getElementById("binOut").textContent = lst.join("\n");
 };
-
 })();
 </script>
 </body></html>
