@@ -194,7 +194,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
 window.dis = () => {
   let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
   let pc = 0, lst = [];
-  lst.push(`* = $${baseAddress.toString(16).padStart(4, "0").toUpperCase()}`);
+   if (bin.length > 0) { lst.push(`* = $${baseAddress.toString(16).padStart(4, "0").toUpperCase()}`); }
   while (pc < bin.length) {
     let addr = baseAddress + pc;
     let o = bin[pc], m = modes[o], mn = ops[o];
