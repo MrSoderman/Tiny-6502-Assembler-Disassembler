@@ -28,7 +28,7 @@ JSR here
 STA $40,X        ; Zero Page,X
 LDX $40,Y        ; Zero Page,Y
 ASL $0A          ; Accumulator
-; BEQ here       ; Relative (labels TODO: BUGGY with the 8 branches and indirect JMP)
+BEQ here         ; Relative (labels TODO: BUGGY indirect JMP)
 STA $0200        ; Absolute
 STA got
 STA $2000,X      ; Absolute,X
@@ -43,9 +43,9 @@ LDA ($40),Y      ; Indirect Indexed (Y)
 </div>
 <div class=container>
 <label for=binIn>Disassembly Input:</label>
-<textarea id=binIn rows=8 spellcheck=false>EA A9 01 A5 40 20 17 C0 95 40 B6 40 06 0A 8D 00
-02 8D 1D C0 9D 00 20 B9 00 10 6C FF FF A1 40 B1
-40</textarea>
+<textarea id=binIn rows=8 spellcheck=false>EA A9 01 A5 40 20 19 C0 95 40 B6 40 06 0A F0 09
+8D 00 02 8D 1F C0 9D 00 20 B9 00 10 6C FF FF A1
+40 B1 40</textarea>
 <button onclick=dis()>Disassemble</button>
 <pre id=binOut aria-live=polite role=region></pre>
 </div>
@@ -188,9 +188,9 @@ LDA ($40),Y      ; Indirect Indexed (Y)
       case IMM: case ZP: case ZPX: case ZPY: case INDX: case INDY: bytes[pc++] = op.v & 0xFF; break;
       case ABS: case ABSX: case ABSY: case IND16: bytes[pc++] = op.v & 0xFF; bytes[pc++] = op.v >> 8; break;
       case BRA: {
-        let target = op.v;               // Label address
-        let offset = target - (pc + 1);
-        offset=0;
+        let absolutePc = baseAddress + pc - 1;  // maybe pc is already incremented past opcode?
+        let target = op.v;                      // Label's absolute address
+        let offset = target - (absolutePc + 2);
         if (offset < -128 || offset > 127) {
           alert(`Branch out of range at ${hx(pc - 1)}`);
           return;
