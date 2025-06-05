@@ -28,13 +28,13 @@ JSR here
 STA $40,X        ; Zero Page,X
 LDX $40,Y        ; Zero Page,Y
 ASL $0A          ; Accumulator
-BEQ here         ; Relative (labels TODO: BUGGY indirect JMP)
+BEQ here         ; Relative
 STA $0200        ; Absolute
 STA got
 STA $2000,X      ; Absolute,X
 here: 
 LDA $1000,Y      ; Absolute,Y
-JMP ($FFFF)      ; Indirect
+JMP ($FFFF)      ; Indirect (TODO labels will give buggy offset with indirect JMP)
 got: LDA ($40,X) ; Indexed Indirect (X)
 LDA ($40),Y      ; Indirect Indexed (Y)
 </textarea>
@@ -122,6 +122,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     if ((m = s.match(/^\(([\da-f]+)\),Y$/i))) return { m: INDY, v: parseInt(m[1], 16) };
     if ((m = s.match(/^\(([\da-f]+),X\)$/i))) return { m: INDX, v: parseInt(m[1], 16) };
     if ((m = s.match(/^\(([\da-f]+)\)$/i))) return { m: IND16, v: parseInt(m[1], 16) };
+    if ((m = s.match(/^\(([a-z_.$][\w.$]*)\)$/i))) return { m: IND16, v: m[1].toUpperCase() }; // JMP INDIRECT LABEL TEST 
     if ((m = s.match(/^([\da-f]+),([XY])$/i))) {
       let v = parseInt(m[1], 16);
       return { m: m[2] === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY), v };
@@ -165,8 +166,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
       pc+=len(am);                           // increment program counter
     }
     // 2nd pass (encode)
-    pc=0;
-    let bytes=[];
+    pc=0; let bytes=[];
     for(let l of lines){
       l=l.split(";")[0].trim();
       if(!l)continue;
