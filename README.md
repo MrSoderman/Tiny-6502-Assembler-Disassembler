@@ -19,5 +19,4 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 
 ## Known Issues
 
-- Labels are not yet supported in branch instructions (e.g., `BEQ label`)
 - Indirect jumps using labels (e.g., `JMP (label)`) are not currently handled
