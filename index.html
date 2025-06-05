@@ -141,17 +141,17 @@ LDA ($40),Y      ; Indirect Indexed (Y)
           if(!l)continue;}                   // skip if nothing left
       let [mn,...ops]=l.split(/\s+/);        // split mnemonic and operands
       let opstr=ops.join(" ");               // join operands back to string
-    let {m: am} = pOp(opstr);  // parse addressing mode
-    if (am == null) {
-      if (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") {
-        am = BRA;  // branch instructions get REL (BRA) mode
-      } else {
-        am = ABS;  // others get ABS by default
+      let {m: am} = pOp(opstr);              // parse addressing mode
+      if (am == null) {
+        if (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") {
+          am = BRA;  // branch instructions get REL (BRA) mode
+        } else {
+          am = ABS;  // others get ABS by default
+        }
       }
-    }
-      if(!opcodeMap[mn.toUpperCase()]        // check if mnemonic & mode valid
-        ||opcodeMap[mn.toUpperCase()][am]===undefined){alert(`2 Bad inst: ${mn} ${opstr}`);return;} // HERE IT HTINKS Bxx LABEL is wgon
-      pc+=len(am);                           // increment program counter
+      if(!opcodeMap[mn.toUpperCase()] 
+        ||opcodeMap[mn.toUpperCase()][am]===undefined){alert(`2 Bad inst: ${mn} ${opstr}`);return;}
+      pc+=len(am);
     }
     // 2nd pass (encode)
     pc=0; let bytes=[];
