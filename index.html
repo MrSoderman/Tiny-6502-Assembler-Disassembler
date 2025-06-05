@@ -12,24 +12,23 @@ button:hover { background:#0088cc; }
 label { font-weight:bold; margin-bottom:0.5em; text-align:left; width:100%; max-width:800px; font-size:1rem; }
 .container { margin-bottom:2em; display:flex; flex-direction:column; align-items:center; }
 @media (max-width:600px) { body { padding:1em; } textarea, pre { font-size:0.9rem; } button { font-size:0.9rem; padding:0.4em 1em; } }
+#saveBtn { position: fixed; top: 1em; right: 1em; margin: 0; z-index: 1000; }
 </style>
 
 </head>
 <body>
 <h1>Tiny 6502 Assembler/Disassembler</h1>
-<div class=container>
-<textarea id="asmIn" rows="22" spellcheck="false" autofocus>
+<div class=container><textarea id="asmIn" rows="22" spellcheck="false" autofocus>
 ; This is example code, feel free to modify it or enter your own.  
 ; Alternatively, you can use the disassembly box below  
 ; by inputting hexadecimal bytes, separated by spaces.
+; Press Save Binary to get a binary file.
 
 * = 49152        ; Base address that you want
-
 NOP              ; Implied
 ASL              ; Accumulator
 LDA #$01         ; Immediate
 LDA $40          ; Zero Page
-JSR here
 STA %00111111,X  ; Zero Page,X
 LDX $40,Y        ; Zero Page,Y
 BEQ here         ; Relative
@@ -42,13 +41,8 @@ JMP (here)
 got: LDA ($40,X) ; Indexed Indirect (X)
 LDA ($40),Y      ; Indirect Indexed (Y)
 </textarea>
-<button onclick=asm()>Assemble</button>
-</div>
-<div class=container>
-<textarea id="binIn" rows="22" spellcheck="false"></textarea>
-<button onclick=dis()>Disassemble</button>
-<pre id=binOut aria-live=polite role=region></pre>
-</div>
+<button onclick=asm()>Assemble</button></div><div class=container><textarea id="binIn" rows="22" spellcheck="false"></textarea>
+<button onclick=dis()>Disassemble</button><button id="saveBtn">Save Binary</button><pre id=binOut aria-live=polite role=region></pre></div>
 <script>
 (() => {
   // Supports all 56 official 6502 *instructions* (151 opcodes including addressing modes).
@@ -57,7 +51,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   // The 13 addressing modes of 6502
   // Implied, Accumulator, Immediate, Zero Page, Zero Page,X, Zero Page,Y, (Indirect,X), (Indirect),Y, Absolute, Absolute,X, Absolute,Y, (Absolute) — only used by JMP, Relative - Used only by the 8 branches
   const [IMP, IMPA, BRA, IMM, ZP, ZPX, ZPY, INDX, INDY, ABS, ABSX, ABSY, IND16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-   
+
   // The 56 official opcodes of the 6502
   let ops = [
   "BRK","ORA","*","*","*","ORA","ASL","*","PHP","ORA","ASL","*","*","ORA","ASL","*",
@@ -101,6 +95,14 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
     const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
 
+    // Simple save function, called by save button
+     document.getElementById('saveBtn').addEventListener('click', () => {
+      let t=document.getElementById('binIn').value.trim(),h=t.match(/\b[0-9A-Fa-f]{2}\b/g);
+      if(!t)return alert("No binary data to save.");if(!h||!h.length)return alert("No valid hex bytes found.");
+      saveBinaryFile(new Uint8Array(h.map(b=>parseInt(b,16))),'disassembly.bin');
+    }); // const assembledBytes = new Uint8Array([0xEA, 0xA9, 0x01, 0x8D, 0x00, 0x02]); saveBinaryFile(assembledBytes, 'program.bin');
+     function saveBinaryFile(b,n='output.bin'){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b]));a.download=n;a.click();URL.revokeObjectURL(a.href);}
+
     const opcodeMap={};
     for(let i=0;i<256;i++){
       let m=ops[i];
@@ -139,7 +141,6 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     if (/^[a-z_.$][\w.$]*$/i.test(s)) return { m: null, v: s.toUpperCase() };
     return { m: IMP };
   }
-
   window.asm=()=>{
     let lines=document.getElementById("asmIn").value.split("\n"),labels={},pc=0;
     // 1st pass (labels)                     // Need to fix and simplify
@@ -170,7 +171,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     pc=0; let bytes=[];
     for (let l of lines) {
       l = l.split(";")[0].trim();                       // Remove comment, trim line
-      let setpc = l.match(/^\*\s*=\s*(.+)$/); // * = ####
+      let setpc = l.match(/^\*\s*=\s*(.+)$/);           // * = ####
       if (setpc) { baseAddress = parseNumber(setpc[1]); continue; } // * = ####
       if (!l) continue;                                 // Skip empty line
       let m = l.match(/^([A-Z0-9_.$]+):/i);             // Match label
@@ -203,7 +204,6 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     for (let i = 0; i < hexBytes.length; i += 16) { lines.push(hexBytes.slice(i, i + 16).join(" ")); }
   document.getElementById("binIn").value = lines.join("\n");
   };
-
 window.dis = () => {
   let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
   let pc = 0, lst = [];
