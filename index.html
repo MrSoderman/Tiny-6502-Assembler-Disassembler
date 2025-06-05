@@ -33,7 +33,8 @@ STA got
 STA $2000,X      ; Absolute,X
 here: 
 LDA $1000,Y      ; Absolute,Y
-JMP ($FFFF)      ; Indirect (TODO labels will give buggy offset with indirect JMP)
+JMP ($FFFF)      ; Indirect
+JMP (here)
 got: LDA ($40,X) ; Indexed Indirect (X)
 LDA ($40),Y      ; Indirect Indexed (Y)
 </textarea>
@@ -43,8 +44,8 @@ LDA ($40),Y      ; Indirect Indexed (Y)
 <div class=container>
 <label for=binIn>Disassembly Input:</label>
 <textarea id=binIn rows=8 spellcheck=false>EA A9 01 A5 40 20 19 C0 95 40 B6 40 06 0A F0 09
-8D 00 02 8D 1F C0 9D 00 20 B9 00 10 6C FF FF A1
-40 B1 40</textarea>
+8D 00 02 8D 22 C0 9D 00 20 B9 00 10 6C FF FF 6C
+19 C0 A1 40 B1 40</textarea>
 <button onclick=dis()>Disassemble</button>
 <pre id=binOut aria-live=polite role=region></pre>
 </div>
@@ -110,6 +111,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     if ((m = s.match(/^\(([\da-f]+)\),Y$/i))) return { m: INDY, v: parseInt(m[1], 16) };
     if ((m = s.match(/^\(([\da-f]+),X\)$/i))) return { m: INDX, v: parseInt(m[1], 16) };
     if ((m = s.match(/^\(([\da-f]+)\)$/i))) return { m: IND16, v: parseInt(m[1], 16) };
+    
     if ((m = s.match(/^\(([a-z_.$][\w.$]*)\)$/i))) return { m: IND16, v: m[1].toUpperCase() }; // JMP INDIRECT LABEL TEST 
     if ((m = s.match(/^([\da-f]+),([XY])$/i))) {
       let v = parseInt(m[1], 16);
@@ -163,12 +165,14 @@ LDA ($40),Y      ; Indirect Indexed (Y)
       let [mn,...ops]=l.split(/\s+/);
       let opstr=ops.join(" ");
       let op=pOp(opstr);
-      if(op.m==null){
-        let lbl=op.v.toUpperCase();
-        if(labels[lbl]===undefined){alert(`No label: ${lbl}`);return;}
-        op.m=(mn.toUpperCase().startsWith("B")&&mn.toUpperCase()!="BIT")?BRA:ABS;
-        op.v = baseAddress + labels[lbl]; // Fix address according to * = baseAddress
+      if ((op.m == null) || (op.m === IND16 && typeof op.v === "string")) {
+      let lbl = op.v.toUpperCase();
+      if (labels[lbl] === undefined) { alert(`No label: ${lbl}`); return; }
+      op.v = baseAddress + labels[lbl];
+      if (op.m == null) {
+        op.m = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() != "BIT") ? BRA : ABS;
       }
+    }
       let opc=opcodeMap[mn.toUpperCase()]?.[op.m];
       if(opc===undefined){alert(`1 Bad inst: ${mn} ${opstr}`);return;}
       bytes[pc++]=opc;
