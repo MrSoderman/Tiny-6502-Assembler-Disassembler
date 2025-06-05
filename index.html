@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Tiny 6502 Assembler/Disassembler</title>
 
 <style>
@@ -55,21 +54,10 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   // The 105 unoffical opcodes are not covered, but can easily be included by changing the ops and modes arrays.
 
   // The 13 addressing modes of 6502 (all included in example code)
-  const IMP=0,   // Implied
-        IMPA=1,  // Accumulator (really the same as implied for an assembler/disassmbler)
-        IMM=3,   // Immediate
-        ZP=4,    // Zero Page
-        ZPX=5,   // Zero Page,X
-        ZPY=6,   // Zero Page,Y
-        INDX=7,  // (Indirect,X)
-        INDY=8,  // (Indirect),Y
-        ABS=9,   // Absolute - used by many opcodes including JMP and JSR
-        ABSX=10, // Absolute,X
-        ABSY=11, // Absolute,Y
-        IND16=12,// (Absolute) — only used by JMP
-        BRA=2;   // Relative - Used only by the 8 branches
-
- // The 56 official opcodes of the 6502
+  // Implied, Accumulator, Immediate, Zero Page, Zero Page,X, Zero Page,Y, (Indirect,X), (Indirect),Y, Absolute, Absolute,X, Absolute,Y, (Absolute) — only used by JMP, Relative - Used only by the 8 branches
+  const [IMP, IMPA, BRA, IMM, ZP, ZPX, ZPY, INDX, INDY, ABS, ABSX, ABSY, IND16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+   
+  // The 56 official opcodes of the 6502
   let ops = [
   "BRK","ORA","*","*","*","ORA","ASL","*","PHP","ORA","ASL","*","*","ORA","ASL","*",
   "BPL","ORA","*","*","*","ORA","ASL","*","CLC","ORA","*","*","*","ORA","ASL","*",
@@ -88,27 +76,27 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   "CPX","SBC","*","*","CPX","SBC","INC","*","INX","SBC","NOP","*","CPX","SBC","INC","*",
   "BEQ","SBC","*","*","*","SBC","INC","*","SED","SBC","*","*","*","SBC","INC","*"
 ];
-
   // Map the addressing modes to the opcodes
-  let modes=[IMP,INDX,IMP,IMP,IMP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,IMP,ABS,ABS,IMP,
-               BRA,INDY,IMP,IMP,IMP,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,IMP,ABSX,ABSX,IMP,
-               ABS,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
-               BRA,INDY,IMP,IMP,IMP,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,IMP,ABSX,ABSX,IMP,
-               IMP,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,IND16,ABS,ABS,IMP,
-               BRA,INDY,IMP,IMP,ZP,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP,
-               IMP,INDX,IMP,IMP,IMP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
-               BRA,INDY,IMP,IMP,IMP,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,IMP,ABSX,ABSX,IMP,
-               IMP,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMP,IMP,IMP,ABS,ABS,ABS,IMP,
-               BRA,INDY,IMP,IMP,ZPX,ZPX,ZPY,IMP,IMP,ABSY,IMP,IMP,IMP,ABSX,IMP,IMP,
-               IMM,INDX,IMM,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
-               BRA,INDY,IMP,IMP,ZPX,ZPX,ZPY,IMP,IMP,ABSY,IMP,IMP,ABSX,ABSX,ABSY,IMP,
-               IMM,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
-               BRA,INDY,IMP,IMP,ZPX,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP,
-               IMM,INDX,IMP,IMP,ZP,ZP,ZP,IMP,IMP,IMM,IMPA,IMP,ABS,ABS,ABS,IMP,
-               BRA,INDY,IMP,IMP,ZPX,ZPX,ZPX,IMP,IMP,ABSY,IMP,IMP,ABS,ABSX,ABSX,IMP];              
-               // Do some manual temporary patching
-               modes[0x4C] = ABS; modes[0x6C] = IND16; modes[0xD4] = IMP; modes[0xDC] = IMP; modes[0xF4] = IMP; modes[202] = IMP; modes[0x18] = IMP;  modes[0x38] = IMP; modes[0xEA] = IMP; // NOP
-               modes[0x6A] = IMP; modes[0x2A] = IMP; modes[0x0A] = IMP; modes[0x4A] = IMP; modes[0x48]=IMP;modes[0x68]=IMP;modes[0x08]=IMP;modes[0x28]=IMP;modes[0x18]=IMP;modes[0x38]=IMP;modes[0x58]=IMP;modes[0x78]=IMP;modes[0xB8]=IMP;modes[0xD8]=IMP;modes[0xF8]=IMP;modes[0xC8]=IMP;modes[0xE8]=IMP;modes[0x88]=IMP;modes[0xCA]=IMP;modes[0x8A]=IMP;modes[0xAA]=IMP;modes[0x98]=IMP;modes[0xA8]=IMP;modes[0x9A]=IMP;modes[0xBA]=IMP;modes[0xEA]=IMP;modes[0x00]=IMP;modes[0x40]=IMP;modes[0x60]=IMP;modes[0x0A]=IMP;modes[0x4A]=IMP;modes[0x2A]=IMP;modes[0x6A]=IMP;
+  let modes = [
+    IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, IMP, ABS, ABS, IMP,       // 0 - 15
+    BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 16
+    ABS, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,        // 32
+    BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 48
+    IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, IND16, ABS, ABS, IMP,      // 64
+    BRA, INDY, IMP, IMP, ZP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP,    // 80
+    IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,       // 96
+    BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 112
+    IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMP, IMP, IMP, ABS, ABS, ABS, IMP,         // 128
+    BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, IMP, IMP,    // 144
+    IMM, INDX, IMM, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,        // 160
+    BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, ABSX, ABSX, ABSY, IMP,  // 176
+    IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,        // 192
+    BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP,   // 208
+    IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,        // 224
+    BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP    // 240 - 255
+  ];
+    // Do some manual temporary patching
+    modes[76] = ABS; modes[108] = IND16; modes[212] = IMP; modes[220] = IMP; modes[244] = IMP; modes[202] = IMP; modes[24] = IMP; modes[56] = IMP; modes[234] = IMP; modes[106] = IMP; modes[42] = IMP; modes[10] = IMP; modes[74] = IMP; modes[72] = IMP; modes[104] = IMP; modes[40] = IMP; modes[24] = IMP; modes[56] = IMP; modes[88] = IMP; modes[120] = IMP; modes[184] = IMP; modes[216] = IMP; modes[248] = IMP; modes[200] = IMP; modes[232] = IMP; modes[136] = IMP; modes[202] = IMP; modes[138] = IMP; modes[170] = IMP; modes[152] = IMP; modes[168] = IMP; modes[154] = IMP; modes[186] = IMP; modes[234] = IMP; modes[0] = IMP; modes[64] = IMP; modes[96] = IMP; modes[10] = IMP; modes[74] = IMP; modes[42] = IMP; modes[106] = IMP;
 
     const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
     const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
@@ -253,4 +241,5 @@ window.dis = () => {
 };
 })();
 </script>
-</body></html>
+</body>
+</html>
