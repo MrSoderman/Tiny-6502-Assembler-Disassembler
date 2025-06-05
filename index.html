@@ -23,6 +23,8 @@ label { font-weight:bold; margin-bottom:0.5em; text-align:left; width:100%; max-
 ; Alternatively, you can use the disassembly box below  
 ; by inputting hexadecimal bytes, separated by spaces.
 
+* = $C000        ; Base address that you want
+
 NOP              ; Implied
 ASL              ; Accumulator
 LDA #$01         ; Immediate
@@ -95,7 +97,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP    // 240 - 255
   ]; 
 
-    let baseAddress = 0xC000; // * = base address set here
+    let baseAddress = 0x0000; // * = default base address set here
     const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
     const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
 
@@ -131,6 +133,8 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     // 1st pass (labels)                     // Need to fix and simplify
     for(let l of lines){                     // iterate over each line in source
       l=l.split(";")[0].trim();              // remove comments and whitespace
+      let setpc = l.match(/^\*\s*=\s*\$([0-9a-fA-F]{1,4})$/); // * = ####
+      if (setpc) { baseAddress = parseInt(setpc[1], 16); continue; } // * = ####
       if(!l)continue;                        // skip empty lines
       let m=l.match(/^([A-Z0-9_.$]+):/i);    // check for label at line start
       if(m){labels[m[1].toUpperCase()]=pc;   // save label address
@@ -152,22 +156,21 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     }
     // 2nd pass (encode)
     pc=0; let bytes=[];
-    for(let l of lines){
-      l=l.split(";")[0].trim();             // Remove comment, trim line
-      if(!l)continue;                       // Skip empty line
-      let m=l.match(/^([A-Z0-9_.$]+):/i);   // Match label
-      if(m){l=l.slice(m[0].length).trim();if(!l)continue;}
-      let [mn,...ops]=l.split(/\s+/);       // Split mnemonic and operands
-      let opstr=ops.join(" ");              // Join operands
-      let op=pOp(opstr);                    // Parse operand
-      if ((op.m == null) || (op.m === IND16 && typeof op.v === "string")) {
-      let lbl = op.v.toUpperCase();         // Get label nam
-      if (labels[lbl] === undefined) { alert(`No label: ${lbl}`); return; } // Label not found
-      op.v = baseAddress + labels[lbl];                                     // Resolve label to address
-      if (op.m == null) {
-        op.m = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() != "BIT") ? BRA : ABS;
+    for (let l of lines) {
+      l = l.split(";")[0].trim();                       // Remove comment, trim line
+      let setpc = l.match(/^\*\s*=\s*\$([0-9a-fA-F]{1,4})$/); // * = ####
+      if (setpc) { baseAddress = parseInt(setpc[1], 16); continue; } // * = ####
+      if (!l) continue;                                 // Skip empty line
+      let m = l.match(/^([A-Z0-9_.$]+):/i);             // Match label
+      if (m) { l = l.slice(m[0].length).trim(); if (!l) continue; } // Strip label
+      let [mn, ...ops] = l.split(/\s+/);                // Split mnemonic and operands
+      let op = pOp(ops.join(" "));                      // Parse operand
+      if (op.m == null || (op.m === IND16 && typeof op.v === "string")) {
+        let lbl = op.v.toUpperCase();                   // Get label name
+        if (labels[lbl] === undefined) { alert(`No label: ${lbl}`); return; } // Label not found
+        op.v = baseAddress + labels[lbl];               // Resolve label to address
+        if (op.m == null) op.m = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() != "BIT") ? BRA : ABS; // Find mode
       }
-    }
       let opc=opcodeMap[mn.toUpperCase()]?.[op.m];                     // Get opcode
       if(opc===undefined){alert(`1 Bad inst: ${mn} ${opstr}`);return;} // Bad instruction
       bytes[pc++]=opc;
@@ -178,10 +181,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
         let absolutePc = baseAddress + pc - 1;   // Current PC
         let target = op.v;                       // Label's absolute address (Branch Target)
         let offset = target - (absolutePc + 2);  // Relative offset
-        if (offset < -128 || offset > 127) {
-          alert(`Branch out of range at ${hx(pc - 1)}`);
-          return;
-        }
+        if (offset < -128 || offset > 127) { alert(`Branch out of range at ${hx(pc - 1)}`); return; }
         bytes[pc++] = offset & 0xFF;
         break;
       }
@@ -191,6 +191,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     for (let i = 0; i < hexBytes.length; i += 16) { lines.push(hexBytes.slice(i, i + 16).join(" ")); }
   document.getElementById("binIn").value = lines.join("\n");
   };
+
 window.dis = () => {
   let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
   let pc = 0, lst = [];

@@ -19,6 +19,7 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 
 ## Known Issues
 
+- Multiple `* = $xxxx` directives are not supported yet; only the first base address is respected. Using multiple base address resets may cause incorrect assembly or disassembly.
 
 ## Resources
 
