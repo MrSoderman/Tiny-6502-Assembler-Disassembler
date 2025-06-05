@@ -5,14 +5,15 @@
 <title>Tiny 6502 Assembler/Disassembler</title>
 
 <style>
-body { background:#111; color:#0f0; font-family:monospace; padding:1em; max-width:900px; margin:auto; text-align:center; }
-textarea, pre { width:100%; max-width:800px; background:#222; color:#0f0; border:1px solid #555; padding:1em; box-sizing:border-box; font-family:monospace; resize:vertical; margin-bottom:1em; text-align:left; font-size:1rem; }
-button { background:#00aaff; color:#fff; border:none; padding:0.5em 1.5em; margin:1em auto; cursor:pointer; transition:0.3s; font-size:1rem; border-radius:4px; }
-button:hover { background:#0088cc; }
-label { font-weight:bold; margin-bottom:0.5em; text-align:left; width:100%; max-width:800px; font-size:1rem; }
-.container { margin-bottom:2em; display:flex; flex-direction:column; align-items:center; }
-@media (max-width:600px) { body { padding:1em; } textarea, pre { font-size:0.9rem; } button { font-size:0.9rem; padding:0.4em 1em; } }
-#saveBtn { position: fixed; bottom: 1em; right: 1em; margin: 0; z-index: 1000; }
+body {background:#1e1e2f;color:#e0e0e0;font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;padding:2em;max-width:900px;margin:auto;text-align:center;}
+textarea,pre {width:100%;max-width:800px;background:#2a2a3d;color:#e8e8e8;border:1px solid #444;padding:1em;box-sizing:border-box;font-family:"Courier New",Courier,monospace;resize:vertical;margin-bottom:1.5em;text-align:left;font-size:1rem;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.4);}
+button {background:#5b8dfc;color:#fff;border:none;padding:0.6em 2em;margin:1em auto;cursor:pointer;transition:0.3s;font-size:1rem;border-radius:6px;box-shadow:0 4px 10px rgba(91,141,252,0.3);}
+button:hover {background:#3f72d1;}
+label {font-weight:600;margin-bottom:0.5em;text-align:left;width:100%;max-width:800px;font-size:1rem;display:block;color:#bbb;}
+.container {margin-bottom:2em;display:flex;flex-direction:column;align-items:center;}
+@media (max-width:600px) {body {padding:1em;} textarea,pre {font-size:0.95rem;} button {font-size:0.95rem;padding:0.5em 1.5em;}}
+#saveBtn {position:fixed;bottom:1em;right:1em;margin:0;z-index:1000;background:#00bfa6;box-shadow:0 3px 12px rgba(0,191,166,0.3);}
+#saveBtn:hover {background:#009e87;}
 </style>
 
 </head>
@@ -70,48 +71,45 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   "BNE","CMP","*","*","*","CMP","DEC","*","CLD","CMP","*","*","*","CMP","DEC","*",
   "CPX","SBC","*","*","CPX","SBC","INC","*","INX","SBC","NOP","*","CPX","SBC","INC","*",
   "BEQ","SBC","*","*","*","SBC","INC","*","SED","SBC","*","*","*","SBC","INC","*"
-];
+  ];
+
   // Map the addressing modes to the opcodes
-    let modes = [  // Note: imp is used in place of impa, as they're functionally the same for an asm/disasm; no operand.
-    IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IMP, ABS, ABS, IMP,        // 0 - 15
-    BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 16
-    ABS, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 32
-    BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 48
-    IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 64
-    BRA, INDY, IMP, IMP, ZP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP,    // 80
-    IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IND16, ABS, ABS, IMP,      // 96
-    BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 112
-    IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMP, IMP, IMP, ABS, ABS, ABS, IMP,         // 128
-    BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, IMP, IMP,    // 144
-    IMM, INDX, IMM, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 160
-    BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, ABSX, ABSX, ABSY, IMP,  // 176
-    IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 192
-    BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP,   // 208
-    IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 224
-    BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP    // 240 - 255
+  let modes = [  // Note: imp is used in place of impa, as they're functionally the same for an asm/disasm; no operand.
+  IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IMP, ABS, ABS, IMP,        // 0 - 15
+  BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 16
+  ABS, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 32
+  BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 48
+  IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 64
+  BRA, INDY, IMP, IMP, ZP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP,    // 80
+  IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IND16, ABS, ABS, IMP,      // 96
+  BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 112
+  IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMP, IMP, IMP, ABS, ABS, ABS, IMP,         // 128
+  BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, IMP, IMP,    // 144
+  IMM, INDX, IMM, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 160
+  BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, ABSX, ABSX, ABSY, IMP,  // 176
+  IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 192
+  BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP,   // 208
+  IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 224
+  BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP    // 240 - 255
   ]; 
 
-    let baseAddress = 0x0000; // * = default base address set here
-    const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
-    const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
+  const opcodeMap = {};
+  for (let i = 0; i < 256; i++) {
+    const op = ops[i], mode = modes[i];
+    if (op !== "*") (opcodeMap[op] ??= [])[mode] = i;
+  }
 
-    // Simple save function, called by save button
-     document.getElementById('saveBtn').addEventListener('click', () => {
-      let t=document.getElementById('binIn').value.trim(),h=t.match(/\b[0-9A-Fa-f]{2}\b/g);
-      if(!t)return alert("No binary data to save.");if(!h||!h.length)return alert("No valid hex bytes found.");
-      saveBinaryFile(new Uint8Array(h.map(b=>parseInt(b,16))),'disassembly.bin');
-    }); // const assembledBytes = new Uint8Array([0xEA, 0xA9, 0x01, 0x8D, 0x00, 0x02]); saveBinaryFile(assembledBytes, 'program.bin');
-     function saveBinaryFile(b,n='output.bin')
-      {let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b]));a.download=n;a.click();URL.revokeObjectURL(a.href);
-     }
+  let baseAddress = 0x0000; // * = default base address set here
+  const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
+  const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
 
-    const opcodeMap={};
-    for(let i=0;i<256;i++){
-      let m=ops[i];
-      if(m==="*")continue;
-      if(!opcodeMap[m])opcodeMap[m]=[];
-      opcodeMap[m][modes[i]]=i;
-    }
+  // Simple save function, called by save button
+  document.getElementById('saveBtn').addEventListener('click', () => {
+  let t=document.getElementById('binIn').value.trim(),h=t.match(/\b[0-9A-Fa-f]{2}\b/g);
+  if(!t)return alert("No binary data to save.");if(!h||!h.length)return alert("No valid hex bytes found.");
+  saveBinaryFile(new Uint8Array(h.map(b=>parseInt(b,16))),'disassembly.bin');
+  }); // const assembledBytes = new Uint8Array([0xEA, 0xA9, 0x01, 0x8D, 0x00, 0x02]); saveBinaryFile(assembledBytes, 'program.bin');
+  function saveBinaryFile(b,n='output.bin') {let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b]));a.download=n;a.click();URL.revokeObjectURL(a.href); }
 
   function parseNumber(str) {
     str = str.trim().toLowerCase();
@@ -143,6 +141,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     if (/^[a-z_.$][\w.$]*$/i.test(s)) return { m: null, v: s.toUpperCase() };
     return { m: IMP };
   }
+
   window.asm=()=>{
     let lines=document.getElementById("asmIn").value.split("\n"),labels={},pc=0;
     // 1st pass (labels)
@@ -196,6 +195,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     for (let i = 0; i < hexBytes.length; i += 16) { lines.push(hexBytes.slice(i, i + 16).join(" ")); }
   document.getElementById("binIn").value = lines.join("\n");
   };
+  
 window.dis = () => {
   let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
   let pc = 0, lst = [];
@@ -205,15 +205,13 @@ window.dis = () => {
     let o = bin[pc], m = modes[o], mn = ops[o];
     let bytes = [o];
     if (mn === "*") {
-      lst.push(`${addr.toString(16).padStart(4, "0").toUpperCase()}   ${hx(o).padStart(2, "0")}                   .db $${hx(o)}`);
-      pc++; // disasm.push(`.db $${toHex(b)}  ; unknown or incomplete`);
-      continue;
+      let h = hx(o).padStart(2,"0"), a = addr.toString(16).padStart(4,"0").toUpperCase();
+      lst.push(`${a}   ${h}                   .db $${h}`); pc++; continue;
     }
     let ln = len(m);
     if (pc + ln - 1 >= bin.length) {
-      lst.push(`${addr.toString(16).padStart(4, "0").toUpperCase()}   ${hx(o).padStart(2, "0")}                   .db $${hx(o)}`);
-      pc++;
-      continue;
+       let h = hx(o).padStart(2,"0"), a = addr.toString(16).padStart(4,"0").toUpperCase();
+       lst.push(`${a}   ${h}                   .db $${h}`); pc++; continue;
     }
     for (let i = 1; i < ln; i++) bytes.push(bin[pc + i]);
     let opd = "";
