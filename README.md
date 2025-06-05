@@ -20,3 +20,9 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 ## Known Issues
 
 - Indirect jumps using labels (e.g., `JMP (label)`) are not currently handled
+
+## Resources
+
+These resources were useful during development and might help you understand or extend this project:
+
+- [Comprehensive 6502 Instruction Reference](https://www.pagetable.com/c64ref/6502/) — A detailed and practical guide to the 6502 instruction set, addressing modes, and behavior.
