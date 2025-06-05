@@ -19,7 +19,6 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 
 ## Known Issues
 
-- Indirect jumps using labels (e.g., `JMP (label)`) are not currently handled
 
 ## Resources
 
