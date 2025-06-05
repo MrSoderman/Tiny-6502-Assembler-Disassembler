@@ -109,23 +109,35 @@ LDA ($40),Y      ; Indirect Indexed (Y)
       opcodeMap[m][modes[i]]=i;
     }
 
-    function pOp(s) {
-    s = s.trim().replace(/\$/g, '');
+  function parseNumber(str) {
+    str = str.trim().toLowerCase();
+    if (str.startsWith('$')) return parseInt(str.slice(1), 16);
+    if (str.startsWith('%')) return parseInt(str.slice(1), 2);
+    return parseInt(str, 10); // Assume decimal by default
+  }
+ 
+  function pOp(s) {
+    s = s.trim();
     if (!s) return { m: IMP };
     if (s === 'A') return { m: IMPA };
-    if (s[0] === '#') return { m: IMM, v: parseInt(s.slice(1), 16) };
+    if (s[0] === '#') return { m: IMM, v: parseNumber(s.slice(1)) };
     let m;
-    if ((m = s.match(/^\(([\da-f]+)\),Y$/i))) return { m: INDY, v: parseInt(m[1], 16) };
-    if ((m = s.match(/^\(([\da-f]+),X\)$/i))) return { m: INDX, v: parseInt(m[1], 16) };
-    if ((m = s.match(/^\(([\da-f]+)\)$/i))) return { m: IND16, v: parseInt(m[1], 16) };
-    if ((m = s.match(/^\(([a-z_.$][\w.$]*)\)$/i))) return { m: IND16, v: m[1].toUpperCase() };
-    if ((m = s.match(/^([\da-f]+),([XY])$/i))) {
-      let v = parseInt(m[1], 16);
-      return { m: m[2] === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY), v };
+    if ((m = s.match(/^\(([^)]+),X\)$/i))) { let v = parseNumber(m[1]); return { m: INDX, v }; } // Indexed Indirect ( ($40,X) )
+    if ((m = s.match(/^\(([^)]+)\),Y$/i))) { let v = parseNumber(m[1]);  return { m: INDY, v }; } // Indirect Indexed ( ($40),Y )
+    if ((m = s.match(/^\(([^)]+)\)$/i))) {  // Indirect ( ($40) )
+      let inner = m[1];
+      if (/^[\da-f$%]+$/i.test(inner)) { let v = parseNumber(inner); return { m: IND16, v }; }
+      return { m: IND16, v: inner.toUpperCase() };
     }
-    if (/^[a-z_.$][\w.$]*$/i.test(s)) return { m: null, v: s };
-    let v = parseInt(s, 16);
-    return { m: v <= 0xFF ? ZP : ABS, v };
+    if ((m = s.match(/^([^,]+),([XY])$/i))) { // Zero Page,X or Zero Page,Y or Absolute,X or Absolute,Y
+      let v = parseNumber(m[1]);
+      let idx = m[2].toUpperCase();
+      let mode = idx === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY);
+      return { m: mode, v };
+    } // Now test simple numbers or hex starting with $, %, or digits
+    if (/^[0-9$%]/.test(s)) { let v = parseNumber(s); return { m: v <= 0xFF ? ZP : ABS, v }; }
+    if (/^[a-z_.$][\w.$]*$/i.test(s)) return { m: null, v: s.toUpperCase() };
+    return { m: IMP };
   }
 
   window.asm=()=>{
@@ -133,8 +145,8 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     // 1st pass (labels)                     // Need to fix and simplify
     for(let l of lines){                     // iterate over each line in source
       l=l.split(";")[0].trim();              // remove comments and whitespace
-      let setpc = l.match(/^\*\s*=\s*\$([0-9a-fA-F]{1,4})$/); // * = ####
-      if (setpc) { baseAddress = parseInt(setpc[1], 16); continue; } // * = ####
+      let setpc = l.match(/^\*\s*=\s*(.+)$/); // * = ####
+      if (setpc) { baseAddress = parseNumber(setpc[1]); continue; } // * = ####
       if(!l)continue;                        // skip empty lines
       let m=l.match(/^([A-Z0-9_.$]+):/i);    // check for label at line start
       if(m){labels[m[1].toUpperCase()]=pc;   // save label address
@@ -158,8 +170,8 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     pc=0; let bytes=[];
     for (let l of lines) {
       l = l.split(";")[0].trim();                       // Remove comment, trim line
-      let setpc = l.match(/^\*\s*=\s*\$([0-9a-fA-F]{1,4})$/); // * = ####
-      if (setpc) { baseAddress = parseInt(setpc[1], 16); continue; } // * = ####
+      let setpc = l.match(/^\*\s*=\s*(.+)$/); // * = ####
+      if (setpc) { baseAddress = parseNumber(setpc[1]); continue; } // * = ####
       if (!l) continue;                                 // Skip empty line
       let m = l.match(/^([A-Z0-9_.$]+):/i);             // Match label
       if (m) { l = l.slice(m[0].length).trim(); if (!l) continue; } // Strip label

@@ -12,6 +12,7 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 - Supports the standard 6502 instruction set
 - Supports labels
 - Supports comments
+- Supports decimal, hexadecimal and binary numbers and addresses
 - Lightweight and easy to use
 - Written in pure JavaScript, no external dependencies
 
@@ -20,7 +21,6 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 ## Known Issues
 
 - Multiple `* = $xxxx` directives are not supported yet; only the first base address is respected. Using multiple base address resets may cause incorrect assembly or disassembly.
-- The assembler currently assumes all numbers are in hexadecimal, and the disassembler expresses everything in hexadecimal.
 
 ## Resources
 
