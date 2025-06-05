@@ -54,7 +54,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   // Supports all 56 official 6502 *instructions* (151 opcodes including addressing modes).
   // The 105 unoffical opcodes are not covered, but can easily be included by changing the ops and modes arrays.
 
-  // The 13 addressing modes of 6502 (all included in example code)
+  // The 13 addressing modes of 6502
   // Implied, Accumulator, Immediate, Zero Page, Zero Page,X, Zero Page,Y, (Indirect,X), (Indirect),Y, Absolute, Absolute,X, Absolute,Y, (Absolute) — only used by JMP, Relative - Used only by the 8 branches
   const [IMP, IMPA, BRA, IMM, ZP, ZPX, ZPY, INDX, INDY, ABS, ABSX, ABSY, IND16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
    
@@ -97,7 +97,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP    // 240 - 255
   ];
     // Do some manual temporary patching
-    modes[76] = ABS; modes[108] = IND16; modes[212] = IMP; modes[220] = IMP; modes[244] = IMP; modes[202] = IMP; modes[24] = IMP; modes[56] = IMP; modes[234] = IMP; modes[106] = IMP; modes[42] = IMP; modes[10] = IMP; modes[74] = IMP; modes[72] = IMP; modes[104] = IMP; modes[40] = IMP; modes[24] = IMP; modes[56] = IMP; modes[88] = IMP; modes[120] = IMP; modes[184] = IMP; modes[216] = IMP; modes[248] = IMP; modes[200] = IMP; modes[232] = IMP; modes[136] = IMP; modes[202] = IMP; modes[138] = IMP; modes[170] = IMP; modes[152] = IMP; modes[168] = IMP; modes[154] = IMP; modes[186] = IMP; modes[234] = IMP; modes[0] = IMP; modes[64] = IMP; modes[96] = IMP; modes[10] = IMP; modes[74] = IMP; modes[42] = IMP; modes[106] = IMP;
+    modes[76] = ABS; modes[108] = IND16; modes[212] = IMP; modes[220] = IMP; modes[244] = IMP; modes[202] = IMP; modes[56] = IMP; modes[234] = IMP; modes[106] = IMP; modes[42] = IMP; modes[10] = IMP; modes[74] = IMP; modes[72] = IMP; modes[104] = IMP; modes[40] = IMP; modes[24] = IMP; modes[56] = IMP; modes[88] = IMP; modes[120] = IMP; modes[184] = IMP; modes[216] = IMP; modes[248] = IMP; modes[200] = IMP; modes[232] = IMP; modes[136] = IMP; modes[202] = IMP; modes[138] = IMP; modes[170] = IMP; modes[152] = IMP; modes[168] = IMP; modes[154] = IMP; modes[186] = IMP; modes[234] = IMP; modes[0] = IMP; modes[64] = IMP; modes[96] = IMP; modes[10] = IMP; modes[74] = IMP; modes[42] = IMP; modes[106] = IMP;
 
     const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
     const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
@@ -111,8 +111,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     if ((m = s.match(/^\(([\da-f]+)\),Y$/i))) return { m: INDY, v: parseInt(m[1], 16) };
     if ((m = s.match(/^\(([\da-f]+),X\)$/i))) return { m: INDX, v: parseInt(m[1], 16) };
     if ((m = s.match(/^\(([\da-f]+)\)$/i))) return { m: IND16, v: parseInt(m[1], 16) };
-    
-    if ((m = s.match(/^\(([a-z_.$][\w.$]*)\)$/i))) return { m: IND16, v: m[1].toUpperCase() }; // JMP INDIRECT LABEL TEST 
+    if ((m = s.match(/^\(([a-z_.$][\w.$]*)\)$/i))) return { m: IND16, v: m[1].toUpperCase() };
     if ((m = s.match(/^([\da-f]+),([XY])$/i))) {
       let v = parseInt(m[1], 16);
       return { m: m[2] === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY), v };
@@ -180,8 +179,8 @@ LDA ($40),Y      ; Indirect Indexed (Y)
       case IMM: case ZP: case ZPX: case ZPY: case INDX: case INDY: bytes[pc++] = op.v & 0xFF; break;
       case ABS: case ABSX: case ABSY: case IND16: bytes[pc++] = op.v & 0xFF; bytes[pc++] = op.v >> 8; break;
       case BRA: {
-        let absolutePc = baseAddress + pc - 1;  // maybe pc is already incremented past opcode?
-        let target = op.v;                      // Label's absolute address
+        let absolutePc = baseAddress + pc - 1;
+        let target = op.v;                       // Label's absolute address
         let offset = target - (absolutePc + 2);
         if (offset < -128 || offset > 127) {
           alert(`Branch out of range at ${hx(pc - 1)}`);
@@ -235,9 +234,8 @@ window.dis = () => {
         opd = "$" + hx(baseAddress + pc + 2 + off, 4);
         break;
     }
-    // Convert bytes to hex string for left side
-    let hexBytes = bytes.map(b => hx(b).padStart(2, "0")).join(" ");
-    let paddedHex = hexBytes.padEnd(10, " ");  // Padding to keep everything aligned
+    let hexBytes = bytes.map(b => hx(b).padStart(2, "0")).join(" "); // Convert bytes to hex string for left side
+    let paddedHex = hexBytes.padEnd(10, " ");                        // Padding to keep everything aligned
     lst.push(`${addr.toString(16).padStart(4, "0").toUpperCase()}   ${paddedHex}        ${mn}${opd ? " " + opd : ""}`);
     pc += ln;
   }
