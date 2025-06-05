@@ -23,14 +23,14 @@ label { font-weight:bold; margin-bottom:0.5em; text-align:left; width:100%; max-
 ; Alternatively, you can use the disassembly box below  
 ; by inputting hexadecimal bytes, separated by spaces.
 
-* = $C000        ; Base address that you want
+* = 49152        ; Base address that you want
 
 NOP              ; Implied
 ASL              ; Accumulator
 LDA #$01         ; Immediate
 LDA $40          ; Zero Page
 JSR here
-STA $40,X        ; Zero Page,X
+STA %00111111,X  ; Zero Page,X
 LDX $40,Y        ; Zero Page,Y
 BEQ here         ; Relative
 STA $0200        ; Absolute
@@ -225,7 +225,7 @@ window.dis = () => {
     }
     for (let i = 1; i < ln; i++) bytes.push(bin[pc + i]);
     let opd = "";
-    switch (m) {
+    switch (m) { // IMPA is not implmented as IMP and IMPA both refer to opcodes without operands, but it could be easily added.
       case IMP: opd = ""; break;
       case IMM: opd = "#$" + hx(bin[pc + 1]); break;
       case ZP: opd = "$" + hx(bin[pc + 1]); break;
