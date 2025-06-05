@@ -23,6 +23,13 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 
 - Multiple `* = $xxxx` directives are not supported yet; only the first base address is respected. Using multiple base address resets may cause incorrect assembly or disassembly.
 
+
+## Screenshot
+
+Below is a screenshot demonstrating the assembler in use:
+
+![6502 Assembler Screenshot](images/Screenshot.png)
+
 ## Resources
 
 These resources were useful during development and might help you understand or extend this project:
