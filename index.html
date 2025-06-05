@@ -11,41 +11,39 @@ button { background:#00aaff; color:#fff; border:none; padding:0.5em 1.5em; margi
 button:hover { background:#0088cc; }
 label { font-weight:bold; margin-bottom:0.5em; text-align:left; width:100%; max-width:800px; font-size:1rem; }
 .container { margin-bottom:2em; display:flex; flex-direction:column; align-items:center; }
-@media (max-width:600px) { body { padding:1em; } textarea, pre { font-size:0.9rem; } button { font-size:0.9rem; padding:0.4em 1em; } label { font-size:0.9rem; } }
+@media (max-width:600px) { body { padding:1em; } textarea, pre { font-size:0.9rem; } button { font-size:0.9rem; padding:0.4em 1em; } }
 </style>
 
 </head>
 <body>
 <h1>Tiny 6502 Assembler/Disassembler</h1>
 <div class=container>
-<label for=asmIn>Assembly Input:</label>
-<textarea id="asmIn" rows="20" spellcheck="false" autofocus>
+<textarea id="asmIn" rows="22" spellcheck="false" autofocus>
+; This is example code, feel free to modify it or enter your own.  
+; Alternatively, you can use the disassembly box below  
+; by inputting hexadecimal bytes, separated by spaces.
+
 NOP              ; Implied
+ASL              ; Accumulator
 LDA #$01         ; Immediate
 LDA $40          ; Zero Page
 JSR here
 STA $40,X        ; Zero Page,X
 LDX $40,Y        ; Zero Page,Y
-ASL $0A          ; Accumulator
 BEQ here         ; Relative
 STA $0200        ; Absolute
 STA got
 STA $2000,X      ; Absolute,X
-here: 
-LDA $1000,Y      ; Absolute,Y
+here: LDA $1000,Y; Absolute,Y
 JMP ($FFFF)      ; Indirect
 JMP (here)
 got: LDA ($40,X) ; Indexed Indirect (X)
 LDA ($40),Y      ; Indirect Indexed (Y)
 </textarea>
 <button onclick=asm()>Assemble</button>
-<pre id=asmOut aria-live=polite role=region></pre>
 </div>
 <div class=container>
-<label for=binIn>Disassembly Input:</label>
-<textarea id=binIn rows=8 spellcheck=false>EA A9 01 A5 40 20 19 C0 95 40 B6 40 06 0A F0 09
-8D 00 02 8D 22 C0 9D 00 20 B9 00 10 6C FF FF 6C
-19 C0 A1 40 B1 40</textarea>
+<textarea id="binIn" rows="22" spellcheck="false"></textarea>
 <button onclick=dis()>Disassemble</button>
 <pre id=binOut aria-live=polite role=region></pre>
 </div>
@@ -78,29 +76,36 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   "BEQ","SBC","*","*","*","SBC","INC","*","SED","SBC","*","*","*","SBC","INC","*"
 ];
   // Map the addressing modes to the opcodes
-  let modes = [
-    IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, IMP, ABS, ABS, IMP,       // 0 - 15
+    let modes = [  // Note: imp is used in place of impa, as they're functionally the same for an asm/disasm; no operand, this means ASL instead of the syntax ASL A
+    IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IMP, ABS, ABS, IMP,        // 0 - 15
     BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 16
-    ABS, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,        // 32
+    ABS, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 32
     BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 48
-    IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, IND16, ABS, ABS, IMP,      // 64
+    IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 64
     BRA, INDY, IMP, IMP, ZP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP,    // 80
-    IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,       // 96
+    IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IND16, ABS, ABS, IMP,      // 96
     BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP,   // 112
     IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMP, IMP, IMP, ABS, ABS, ABS, IMP,         // 128
     BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, IMP, IMP,    // 144
-    IMM, INDX, IMM, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,        // 160
+    IMM, INDX, IMM, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 160
     BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, ABSX, ABSX, ABSY, IMP,  // 176
-    IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,        // 192
+    IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 192
     BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP,   // 208
-    IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMPA, IMP, ABS, ABS, ABS, IMP,        // 224
+    IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP,         // 224
     BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP    // 240 - 255
-  ];
-    // Do some manual temporary patching
-    modes[76] = ABS; modes[108] = IND16; modes[212] = IMP; modes[220] = IMP; modes[244] = IMP; modes[202] = IMP; modes[56] = IMP; modes[234] = IMP; modes[106] = IMP; modes[42] = IMP; modes[10] = IMP; modes[74] = IMP; modes[72] = IMP; modes[104] = IMP; modes[40] = IMP; modes[24] = IMP; modes[56] = IMP; modes[88] = IMP; modes[120] = IMP; modes[184] = IMP; modes[216] = IMP; modes[248] = IMP; modes[200] = IMP; modes[232] = IMP; modes[136] = IMP; modes[202] = IMP; modes[138] = IMP; modes[170] = IMP; modes[152] = IMP; modes[168] = IMP; modes[154] = IMP; modes[186] = IMP; modes[234] = IMP; modes[0] = IMP; modes[64] = IMP; modes[96] = IMP; modes[10] = IMP; modes[74] = IMP; modes[42] = IMP; modes[106] = IMP;
+  ]; 
 
+    let baseAddress = 0xC000; // * = base address set here
     const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
     const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
+
+    const opcodeMap={};
+    for(let i=0;i<256;i++){
+      let m=ops[i];
+      if(m==="*")continue;
+      if(!opcodeMap[m])opcodeMap[m]=[];
+      opcodeMap[m][modes[i]]=i;
+    }
 
     function pOp(s) {
     s = s.trim().replace(/\$/g, '');
@@ -121,15 +126,6 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     return { m: v <= 0xFF ? ZP : ABS, v };
   }
 
-    const opcodeMap={};
-    for(let i=0;i<256;i++){
-      let m=ops[i];
-      if(m==="*")continue;
-      if(!opcodeMap[m])opcodeMap[m]=[];
-      opcodeMap[m][modes[i]]=i;
-    }
-
-     let baseAddress = 0xC000; // * = address set here
   window.asm=()=>{
     let lines=document.getElementById("asmIn").value.split("\n"),labels={},pc=0;
     // 1st pass (labels)                     // Need to fix and simplify
@@ -157,31 +153,31 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     // 2nd pass (encode)
     pc=0; let bytes=[];
     for(let l of lines){
-      l=l.split(";")[0].trim();
-      if(!l)continue;
-      let m=l.match(/^([A-Z0-9_.$]+):/i);
+      l=l.split(";")[0].trim();             // Remove comment, trim line
+      if(!l)continue;                       // Skip empty line
+      let m=l.match(/^([A-Z0-9_.$]+):/i);   // Match label
       if(m){l=l.slice(m[0].length).trim();if(!l)continue;}
-      let [mn,...ops]=l.split(/\s+/);
-      let opstr=ops.join(" ");
-      let op=pOp(opstr);
+      let [mn,...ops]=l.split(/\s+/);       // Split mnemonic and operands
+      let opstr=ops.join(" ");              // Join operands
+      let op=pOp(opstr);                    // Parse operand
       if ((op.m == null) || (op.m === IND16 && typeof op.v === "string")) {
-      let lbl = op.v.toUpperCase();
-      if (labels[lbl] === undefined) { alert(`No label: ${lbl}`); return; }
-      op.v = baseAddress + labels[lbl];
+      let lbl = op.v.toUpperCase();         // Get label nam
+      if (labels[lbl] === undefined) { alert(`No label: ${lbl}`); return; } // Label not found
+      op.v = baseAddress + labels[lbl];                                     // Resolve label to address
       if (op.m == null) {
         op.m = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() != "BIT") ? BRA : ABS;
       }
     }
-      let opc=opcodeMap[mn.toUpperCase()]?.[op.m];
-      if(opc===undefined){alert(`1 Bad inst: ${mn} ${opstr}`);return;}
+      let opc=opcodeMap[mn.toUpperCase()]?.[op.m];                     // Get opcode
+      if(opc===undefined){alert(`1 Bad inst: ${mn} ${opstr}`);return;} // Bad instruction
       bytes[pc++]=opc;
       switch (op.m) { // -----------------------------------------------------------------------------------
       case IMM: case ZP: case ZPX: case ZPY: case INDX: case INDY: bytes[pc++] = op.v & 0xFF; break;
       case ABS: case ABSX: case ABSY: case IND16: bytes[pc++] = op.v & 0xFF; bytes[pc++] = op.v >> 8; break;
-      case BRA: {
-        let absolutePc = baseAddress + pc - 1;
-        let target = op.v;                       // Label's absolute address
-        let offset = target - (absolutePc + 2);
+      case BRA: {                                // Branch offset
+        let absolutePc = baseAddress + pc - 1;   // Current PC
+        let target = op.v;                       // Label's absolute address (Branch Target)
+        let offset = target - (absolutePc + 2);  // Relative offset
         if (offset < -128 || offset > 127) {
           alert(`Branch out of range at ${hx(pc - 1)}`);
           return;
@@ -193,7 +189,7 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     }
     let hexBytes = bytes.slice(0, pc).map(b => hx(b)); lines = [];
     for (let i = 0; i < hexBytes.length; i += 16) { lines.push(hexBytes.slice(i, i + 16).join(" ")); }
-    document.getElementById("asmOut").textContent = lines.join("\n");
+  document.getElementById("binIn").value = lines.join("\n");
   };
 window.dis = () => {
   let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
