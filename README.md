@@ -23,8 +23,6 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 
 - Multiple * = $xxxx directives are currently unsupported. Using multiple base address resets may result in incorrect assembly and disassembly.
 
-- Labels placed in the middle of instructions are not correctly parsed, leading to incorrect operand address resolution.
-
 ## Screenshot
 
 Below is a screenshot demonstrating the assembler in use:
