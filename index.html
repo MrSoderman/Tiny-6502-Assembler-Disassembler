@@ -34,8 +34,7 @@ STA %00111111,X  ; Zero Page,X
 LDX $40,Y        ; Zero Page,Y
 BEQ here         ; Relative
 STA $0200        ; Absolute
-STA got
-STA $2000,X      ; Absolute,X
+STA here,X       ; Absolute,X
 here: LDA $1000,Y; Absolute,Y
 JMP ($FFFF)      ; Indirect
 JMP (here)
@@ -99,10 +98,6 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     if (op !== "*") (opcodeMap[op] ??= [])[mode] = i;
   }
 
-  let baseAddress = 0x0000; // * = default base address set here
-  const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
-  const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
-
   // Simple save function, called by save button
   document.getElementById('saveBtn').addEventListener('click', () => {
   let t=document.getElementById('binIn').value.trim(),h=t.match(/\b[0-9A-Fa-f]{2}\b/g);
@@ -111,91 +106,108 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   }); // const assembledBytes = new Uint8Array([0xEA, 0xA9, 0x01, 0x8D, 0x00, 0x02]); saveBinaryFile(assembledBytes, 'program.bin');
   function saveBinaryFile(b,n='output.bin') {let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b]));a.download=n;a.click();URL.revokeObjectURL(a.href); }
 
+  let baseAddress = 0xd000; // * = default base address set here
+  const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3;
+  const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0");
+
   function parseNumber(str) {
     str = str.trim().toLowerCase();
     if (str.startsWith('$')) return parseInt(str.slice(1), 16);
     if (str.startsWith('%')) return parseInt(str.slice(1), 2);
     return parseInt(str, 10); // Assume decimal by default
-  }
- 
-  function pOp(s) {
-    s = s.trim();
-    if (!s) return { m: IMP };
-    if (s === 'A') return { m: IMPA };
-    if (s[0] === '#') return { m: IMM, v: parseNumber(s.slice(1)) };
-    let m;
-    if ((m = s.match(/^\(([^)]+),X\)$/i))) { let v = parseNumber(m[1]); return { m: INDX, v }; } // Indexed Indirect ( ($40,X) )
-    if ((m = s.match(/^\(([^)]+)\),Y$/i))) { let v = parseNumber(m[1]);  return { m: INDY, v }; } // Indirect Indexed ( ($40),Y )
-    if ((m = s.match(/^\(([^)]+)\)$/i))) {  // Indirect ( ($40) )
-      let inner = m[1];
-      if (/^[\da-f$%]+$/i.test(inner)) { let v = parseNumber(inner); return { m: IND16, v }; }
-      return { m: IND16, v: inner.toUpperCase() };
-    }
-    if ((m = s.match(/^([^,]+),([XY])$/i))) { // Zero Page,X or Zero Page,Y or Absolute,X or Absolute,Y
-      let v = parseNumber(m[1]);
-      let idx = m[2].toUpperCase();
-      let mode = idx === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY);
-      return { m: mode, v };
-    } // Now test simple numbers or hex starting with $, %, or digits
-    if (/^[0-9$%]/.test(s)) { let v = parseNumber(s); return { m: v <= 0xFF ? ZP : ABS, v }; }
-    if (/^[a-z_.$][\w.$]*$/i.test(s)) return { m: null, v: s.toUpperCase() };
-    return { m: IMP };
-  }
+  }  
 
-  window.asm=()=>{
-    let lines=document.getElementById("asmIn").value.split("\n"),labels={},pc=0;
-    // 1st pass (labels)
-    for(let l of lines){
-      l = l.split(";")[0].trim(); // Remove comments/whitespace
-      if(!l) continue;            // Skip empty lines
-      if(/^\*\s*=\s*(.+)$/.test(l)) { baseAddress = parseNumber(RegExp.$1); continue; } // * = ####
-      let m = l.match(/^([A-Z0-9_.$]+):/i);
-      if(m) { labels[m[1].toUpperCase()] = pc; l = l.slice(m[0].length).trim(); if(!l) continue; } // Save label and trim line
-      let [mn, ...ops] = l.split(/\s+/), opstr = ops.join(" "), {m: am} = pOp(opstr); // Parse instruction mnemonic and operands
-      if(am == null) {
-        const u = mn.toUpperCase();
-        am = ABS; if (u.startsWith("B") && u !== "BIT") am = BRA; // Assume ABS, and check for branch instructions
-      } // Next we validate opcode and addressing mode
-      if(!opcodeMap[mn.toUpperCase()] || opcodeMap[mn.toUpperCase()][am] === undefined) { alert(`2 Bad inst: ${mn} ${opstr}`); return; }
-      pc += len(am); //Increment program counter
+function pOp(s) {
+  s = s.trim();
+  if (!s) return { m: IMP };
+  if (s === 'A') return { m: IMPA };
+  if (s[0] === '#') return { m: IMM, v: parseNumber(s.slice(1)) };
+  let m;
+  if ((m = s.match(/^\(([^)]+),X\)$/i))) { let v = parseNumber(m[1]); return { m: INDX, v }; }
+  if ((m = s.match(/^\(([^)]+)\),Y$/i))) { let v = parseNumber(m[1]); return { m: INDY, v }; }
+  if ((m = s.match(/^\(([^)]+)\)$/i))) {
+    let inner = m[1], v = /^[\da-f$%]+$/i.test(inner) ? parseNumber(inner) : inner.toUpperCase();
+    return { m: IND16, v };
+  }
+  if ((m = s.match(/^([^,]+),([XY])$/i))) { // Handle labels with ,X or ,Y indexing (symbolic or numeric)
+    let val = m[1], idx = m[2].toUpperCase(), v = parseNumber(val);
+    if (isNaN(v)) return { m: null, v: { label: val.toUpperCase(), index: idx } }; // Symbolic label + index - return special object for later resolving
+    let mode = idx === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY);  // Numeric value + index - determine mode immediately
+    return { m: mode, v };
+  }
+  // Simple numbers or hex
+  if (/^[0-9$%]/.test(s)) { let v = parseNumber(s); return { m: v <= 0xFF ? ZP : ABS, v }; }
+  // Label without indexing
+  if (/^[a-z_.$][\w.$]*$/i.test(s)) { return { m: null, v: s.toUpperCase() }; }
+  return { m: IMP };
+}
+
+  window.asm = () => {
+  let lines = document.getElementById("asmIn").value.split("\n"), labels = {}, pc = 0;
+  // 1st pass: collect labels
+  for (let l of lines) {
+    l = l.split(";")[0].trim();
+    if (!l) continue;
+    if (/^\*\s*=\s*(.+)$/.test(l)) { baseAddress = parseNumber(RegExp.$1); continue; }
+    let m = l.match(/^([A-Z0-9_.$]+):/i);
+    if (m) { labels[m[1].toUpperCase()] = pc; l = l.slice(m[0].length).trim(); if (!l) continue; }
+    let [mn, ...ops] = l.split(/\s+/);
+    let opstr = ops.join(" "), { m: am } = pOp(opstr);
+    if (am == null) am = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS;
+    if (!opcodeMap[mn.toUpperCase()]?.[am]) { alert(`2 Bad inst: ${mn} ${opstr}`); return; }
+    pc += len(am);
+  }
+  // 2nd pass: encode bytes
+  pc = 0; 
+  let bytes = [];
+  for (let line of lines) {
+    line = line.split(";")[0].trim();                      // Remove comments and trim whitespace
+    if (!line) continue;                                   // Skip empty lines
+    if (/^\*\s*=\s*(.+)$/.test(line)) { baseAddress = parseNumber(RegExp.$1); continue; } // directive (* = ####)
+    let m = line.match(/^([A-Z0-9_.$]+):/i);               // Match label at start of line
+    if (m) line = line.slice(m[0].length).trim();          // Remove label from line if found
+    if (!line) continue;                                   // Skip if line empty after removing label
+    let [mn, ...ops] = line.split(/\s+/);                  // Split mnemonic and operands
+    let op = pOp(ops.join(" "));                           // Parse operands into addressing mode and value
+    if (op.v && typeof op.v === "object" && op.v.label) {  // If operand is label with index register
+      let lbl = op.v.label.toUpperCase();
+      if (!(lbl in labels)) { alert(`No label: ${lbl}`); return; }  // Check label exists
+      let addr = baseAddress + labels[lbl];                  // Calculate label address
+      let idx = op.v.index.toUpperCase();
+      op.v = addr;                                           // Update operand value to address
+      if (idx === "X") op.m = addr <= 0xFF ? ZPX : ABSX;      // Determine indexed addressing mode X
+      else if (idx === "Y") op.m = addr <= 0xFF ? ZPY : ABSY; // Determine indexed addressing mode Y
+      else { alert(`Invalid index register: ${idx}`); return; } // Error if invalid index
+    } 
+    else if (op.m == null || (op.m === IND16 && typeof op.v === "string")) { // Handle label operand without index
+      let lbl = op.v.toUpperCase();
+      if (!(lbl in labels)) { alert(`No label: ${lbl}`); return; } // Check label exists
+      op.v = baseAddress + labels[lbl];                     // Update operand value to label address
+      if (op.m == null)                                     
+        op.m = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS; // Set addressing mode if missing
     }
-    // 2nd pass (encode)
-    pc=0; let bytes=[];
-    for (let l of lines) {
-      l = l.split(";")[0].trim(); // Remove comment, trim line
-      if (/^\*\s*=\s*(.+)$/.test(l)) { baseAddress = parseNumber(RegExp.$1); continue; } // * = ####
-      if (!l) continue;                     // Skip empty line
-      let m = l.match(/^([A-Z0-9_.$]+):/i); // Match label
-      if (m) { l = l.slice(m[0].length).trim(); if (!l) continue; } // Strip label
-      let [mn, ...ops] = l.split(/\s+/);    // Split mnemonic and operands
-      let op = pOp(ops.join(" "));          // Parse operand
-      if (op.m == null || (op.m === IND16 && typeof op.v === "string")) {
-        let lbl = op.v.toUpperCase();       // Get label name
-        if (labels[lbl] === undefined) { alert(`No label: ${lbl}`); return; } // Label not found
-        op.v = baseAddress + labels[lbl];   // Resolve label to address
-        if (op.m == null) op.m = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() != "BIT") ? BRA : ABS; // Find mode
-      }
-      let opc=opcodeMap[mn.toUpperCase()]?.[op.m];                     // Get opcode
-      if(opc===undefined){alert(`1 Bad inst: ${mn} ${opstr}`);return;} // Bad instruction
-      bytes[pc++]=opc;
-      switch (op.m) { // -----------------------------------------------------------------------------------
-      case IMM: case ZP: case ZPX: case ZPY: case INDX: case INDY: bytes[pc++] = op.v & 0xFF; break;
-      case ABS: case ABSX: case ABSY: case IND16: bytes[pc++] = op.v & 0xFF; bytes[pc++] = op.v >> 8; break;
-      case BRA: {                               // Branch offset
-        let absolutePc = baseAddress + pc - 1;  // Current PC
-        let target = op.v;                      // Label's absolute address (Branch Target)
-        let offset = target - (absolutePc + 2); // Relative offset
-        if (offset < -128 || offset > 127) { alert(`Branch out of range at ${hx(pc - 1)}`); return; }
-        bytes[pc++] = offset & 0xFF;
-        break;
-      }
-    } // ---------------------------------------------------------------------------------------------------
+    let opc = opcodeMap[mn.toUpperCase()]?.[op.m];           // Lookup opcode for mnemonic and mode
+    if (opc === undefined) { alert(`Bad inst: ${mn} ${ops.join(" ")}`); return; } // Error if no opcode
+    bytes[pc++] = opc;                                       // Store opcode byte
+    if ([IMM, ZP, ZPX, ZPY, INDX, INDY].includes(op.m))      // For single-byte operand modes
+      bytes[pc++] = op.v & 0xFF;                             // Store low byte of operand
+    else if ([ABS, ABSX, ABSY, IND16].includes(op.m)) {      // For two-byte operand modes
+      bytes[pc++] = op.v & 0xFF; bytes[pc++] = op.v >> 8;    // Store low & high bytes
     }
-    let hexBytes = bytes.slice(0, pc).map(b => hx(b)); lines = [];
-    for (let i = 0; i < hexBytes.length; i += 16) { lines.push(hexBytes.slice(i, i + 16).join(" ")); }
-  document.getElementById("binIn").value = lines.join("\n");
-  };
-  
+    else if (op.m === BRA) {                                 // For branch instructions
+      let offset = op.v - (baseAddress + pc + 1);            // Calculate branch offset
+      if (offset < -128 || offset > 127) {                   // Check offset range (-128..127)
+        alert(`Branch out of range at ${hx(pc - 1)}`);       // Error if out of range
+        return; 
+      }
+      bytes[pc++] = offset & 0xFF;                           // Store branch offset byte
+    }
+  }
+  let hexBytes = bytes.slice(0, pc).map(b => hx(b)), outLines = []; // Output hex bytes
+  for (let i = 0; i < hexBytes.length; i += 16) outLines.push(hexBytes.slice(i, i + 16).join(" "));
+  document.getElementById("binIn").value = outLines.join("\n");
+};
+
 window.dis = () => {
   let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16));
   let pc = 0, lst = [];
@@ -207,7 +219,7 @@ window.dis = () => {
     if (mn === "*") {
       let h = hx(o).padStart(2,"0"), a = addr.toString(16).padStart(4,"0").toUpperCase();
       lst.push(`${a}   ${h}                   .db $${h}`); pc++; continue;
-    }
+    }    
     let ln = len(m);
     if (pc + ln - 1 >= bin.length) {
        let h = hx(o).padStart(2,"0"), a = addr.toString(16).padStart(4,"0").toUpperCase();
@@ -227,11 +239,7 @@ window.dis = () => {
       case INDX: opd = "($" + hx(bin[pc + 1]) + ",X)"; break;
       case INDY: opd = "($" + hx(bin[pc + 1]) + "),Y"; break;
       case IND16: opd = "($" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ")"; break;
-      case BRA:
-        let off = bin[pc + 1];
-        if (off & 0x80) off = off - 0x100;
-        opd = "$" + hx(baseAddress + pc + 2 + off, 4);
-        break;
+      case BRA: let off = bin[pc + 1]; if (off & 0x80) off -= 0x100; opd = "$" + hx(baseAddress + pc + 2 + off, 4); break;
     }
     let hexBytes = bytes.map(b => hx(b).padStart(2, "0")).join(" "); // Convert bytes to hex string for left side
     let paddedHex = hexBytes.padEnd(10, " ");                        // Padding to keep everything aligned
