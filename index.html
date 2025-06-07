@@ -82,6 +82,14 @@
         display: none;
     }
 
+    /* Desktop no scrollbar but allow scrolling using touch and scrollwheel*/
+    html, body { height: 100%; scrollbar-width: none; -ms-overflow-style: none; } html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; } 
+
+    /* Desktop win11 tablet etc no pinch zooming, only scrolling gestures  */
+    html, body {
+    touch-action: pan-x pan-y;  /* allow scroll but disable pinch-zoom */
+    }
+
     button {
         background: #5b8dfc;
         color: #fff;
@@ -132,6 +140,11 @@
 
     /* Desktop no scrollbar but allow scrolling using touch and scrollwheel*/
      html, body { height: 100%; scrollbar-width: none; -ms-overflow-style: none; } html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; } 
+
+    /* Desktop win11 tablet etc no pinch zooming, only scrolling gestures  */
+    html, body {
+    touch-action: pan-x pan-y;  /* allow scroll but disable pinch-zoom */
+    }
 
 </style>
 
