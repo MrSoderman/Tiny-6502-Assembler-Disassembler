@@ -5,7 +5,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>Tiny 6502 Assembler/Disassembler</title>
-  
   <style>
     html, body {
         height: 100%;
@@ -14,8 +13,17 @@
         box-sizing: border-box;
     }  
 
+    html {
+        scrollbar-width: none;        /* Firefox */
+        -ms-overflow-style: none;     /* Edge */
+    }
+
+    html::-webkit-scrollbar {
+        display: none;                /* Chrome, Safari, Opera */
+    }
+
     body {
-        min-height: 100vh;  /* Ensures body is at least full viewport height */
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -32,7 +40,7 @@
         font-size: 1.5rem;
         max-width: 100%;
         word-wrap: break-word;
-        margin-bottom: 1.em; /* Here */
+        margin-bottom: 1em;
         text-align: center;
     }
 
@@ -47,6 +55,10 @@
 
     textarea,
     pre {
+        overflow: auto;
+        scrollbar-width: none;        /* Firefox */
+        -ms-overflow-style: none;     /* Edge */
+
         width: 100%;
         max-width: 800px;
         min-width: 280px;
@@ -62,6 +74,12 @@
         font-size: 1rem;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Hide scrollbars for Chrome, Safari, Opera */
+    textarea::-webkit-scrollbar,
+    pre::-webkit-scrollbar {
+        display: none;
     }
 
     button {
