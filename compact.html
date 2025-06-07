@@ -122,7 +122,47 @@ LDA ($40),Y      ; Indirect Indexed (Y)
     return parseInt(str, 10); // Assume decimal by default
   }  
 
-function pOp(s) { // Parses operand string s and returns addressing mode and value or label info
+  function pOp(s, mn) {
+  s = s.trim();
+  if (!s) return { m: IMP };
+  if (s === 'A') return { m: IMPA };
+  if (s[0] === '#') return { m: IMM, v: parseNumber(s.slice(1)) };
+  
+  let m;
+  if ((m = s.match(/^\(([^)]+),X\)$/i))) {
+    let v = parseNumber(m[1]);
+    return { m: INDX, v };
+  }
+  if ((m = s.match(/^\(([^)]+)\),Y$/i))) {
+    let v = parseNumber(m[1]);
+    return { m: INDY, v };
+  }
+  if ((m = s.match(/^\(([^)]+)\)$/i))) {
+    let inner = m[1];
+    let v = /^[\da-f$%]+$/i.test(inner) ? parseNumber(inner) : inner.toUpperCase();
+    return { m: IND16, v };
+  }
+  if ((m = s.match(/^([^,]+),([XY])$/i))) {
+    let val = m[1], idx = m[2].toUpperCase(), v = parseNumber(val);
+    if (isNaN(v)) return { m: null, v: { label: val.toUpperCase(), index: idx } };
+    let mode = idx === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY);
+    return { m: mode, v };
+  }
+  if (/^[0-9$%]/.test(s)) {
+    let v = parseNumber(s);
+    if (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") {
+      return { m: BRA, v };
+    }
+    return { m: v <= 0xFF ? ZP : ABS, v };
+  }
+  if (/^[a-z_.$][\w.$]*$/i.test(s)) {
+    return { m: null, v: s.toUpperCase() };
+  }
+  return { m: IMP };
+}
+
+
+function oldpOp(s) { // Parses operand string s and returns addressing mode and value or label info
   s = s.trim();                      // Remove leading and trailing whitespace from the operand string
   if (!s) return { m: IMP };         // No operand: implied mode
   if (s === 'A') return { m: IMPA }; // Accumulator addressing (No Operand)
@@ -140,6 +180,7 @@ function pOp(s) { // Parses operand string s and returns addressing mode and val
     let mode = idx === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY);  // Numeric value + index - determine mode immediately
     return { m: mode, v };
   }
+  // Parses OPerands (numbers of different bases) e.g. this will parse numeric operands like $C000 as { m: ABS, v: 0xC000 }
   if (/^[0-9$%]/.test(s)) { let v = parseNumber(s); return { m: v <= 0xFF ? ZP : ABS, v }; }  // Numeric operand, choose zero page or absolute
   if (/^[a-z_.$][\w.$]*$/i.test(s)) { return { m: null, v: s.toUpperCase() }; }               // Label without indexing
   return { m: IMP }; // Default to implied mode
@@ -155,7 +196,7 @@ window.asm = () => {
     if (/^\*\s*=\s*(.+)$/.test(l)) { baseAddress = parseNumber(RegExp.$1); continue; } // Search for * = (sets base address)
     let m = l.match(/^([A-Z0-9_.$]+):/i); // Search for a label at the start of the line
     if (m) { labels[m[1].toUpperCase()] = pc; l = l.slice(m[0].length).trim(); if (!l) continue; } // Save label & trim line
-    let [mn, ...ops] = l.split(/\s+/), { m: am } = pOp(ops.join(" ")); // Parse mnemonic and operand mode
+    let [mn, ...ops] = l.split(/\s+/), { m: am } = pOp(ops.join(" "), mn); // Parse mnemonic and operand mode
     if (am == null) am = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS; // Default mode
     if (!opcodeMap[mn.toUpperCase()]?.[am]) { alert(`Bad inst: ${mn} ${ops.join(" ")}`); return; } // Invalid opcode
     pc += len(am); // Increase pc by instruction length
@@ -169,7 +210,7 @@ window.asm = () => {
     if (/^\*\s*=\s*(.+)$/.test(line)) { baseAddress = parseNumber(RegExp.$1); continue; } // Set base address again
     let m = line.match(/^([A-Z0-9_.$]+):/i); if (m) line = line.slice(m[0].length).trim(); // Remove label
     if (!line) continue; // Skip empty lines
-    let [mn, ...ops] = line.split(/\s+/), op = pOp(ops.join(" ")), lbl, idx, addr;
+     let [mn, ...ops] = line.split(/\s+/), op = pOp(ops.join(" "), mn), lbl, idx, addr;
     if (op.v?.label) { // Handle symbolic indexed label
       lbl = op.v.label.toUpperCase(); // Get label name in uppercase
       if (!(lbl in labels)) return alert(`No label: ${lbl}`); // Label not found

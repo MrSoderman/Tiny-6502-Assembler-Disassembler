@@ -168,326 +168,333 @@ LDA ($40),Y      ; Indirect Indexed (Y)
  
     <script>
         (() => {
-            // Supports all 56 official 6502 *instructions* (151 opcodes including addressing modes).
-            // The 105 unoffical opcodes are not covered, but can easily be included by changing the ops and modes arrays.
+      // Supports all 56 official 6502 *instructions* (151 opcodes including addressing modes).
+      // The 105 unoffical opcodes are not covered, but can easily be included by changing the ops and modes arrays.
 
-            // The 13 addressing modes of 6502
-            const [IMP, IMPA, BRA, IMM, ZP, ZPX, ZPY, INDX, INDY, ABS, ABSX, ABSY, IND16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+      // The 13 addressing modes of 6502
+      const [IMP, IMPA, BRA, IMM, ZP, ZPX, ZPY, INDX, INDY, ABS, ABSX, ABSY, IND16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-            // The 56 official opcodes of the 6502
-            let ops = [
-                "BRK", "ORA", "*", "*", "*", "ORA", "ASL", "*", "PHP", "ORA", "ASL", "*", "*", "ORA", "ASL", "*",
-                "BPL", "ORA", "*", "*", "*", "ORA", "ASL", "*", "CLC", "ORA", "*", "*", "*", "ORA", "ASL", "*",
-                "JSR", "AND", "*", "*", "BIT", "AND", "ROL", "*", "PLP", "AND", "ROL", "*", "BIT", "AND", "ROL", "*",
-                "BMI", "AND", "*", "*", "*", "AND", "ROL", "*", "SEC", "AND", "*", "*", "*", "AND", "ROL", "*",
-                "RTI", "EOR", "*", "*", "*", "EOR", "LSR", "*", "PHA", "EOR", "LSR", "*", "JMP", "EOR", "LSR", "*",
-                "BVC", "EOR", "*", "*", "*", "EOR", "LSR", "*", "CLI", "EOR", "*", "*", "*", "EOR", "LSR", "*",
-                "RTS", "ADC", "*", "*", "*", "ADC", "ROR", "*", "PLA", "ADC", "ROR", "*", "JMP", "ADC", "ROR", "*",
-                "BVS", "ADC", "*", "*", "*", "ADC", "ROR", "*", "SEI", "ADC", "*", "*", "*", "ADC", "ROR", "*",
-                "*", "STA", "*", "*", "STY", "STA", "STX", "*", "DEY", "*", "TXA", "*", "STY", "STA", "STX", "*",
-                "BCC", "STA", "*", "*", "STY", "STA", "STX", "*", "TYA", "STA", "TXS", "*", "*", "STA", "*", "*",
-                "LDY", "LDA", "LDX", "*", "LDY", "LDA", "LDX", "*", "TAY", "LDA", "TAX", "*", "LDY", "LDA", "LDX", "*",
-                "BCS", "LDA", "*", "*", "LDY", "LDA", "LDX", "*", "CLV", "LDA", "TSX", "*", "LDY", "LDA", "LDX", "*",
-                "CPY", "CMP", "*", "*", "CPY", "CMP", "DEC", "*", "INY", "CMP", "DEX", "*", "CPY", "CMP", "DEC", "*",
-                "BNE", "CMP", "*", "*", "*", "CMP", "DEC", "*", "CLD", "CMP", "*", "*", "*", "CMP", "DEC", "*",
-                "CPX", "SBC", "*", "*", "CPX", "SBC", "INC", "*", "INX", "SBC", "NOP", "*", "CPX", "SBC", "INC", "*",
-                "BEQ", "SBC", "*", "*", "*", "SBC", "INC", "*", "SED", "SBC", "*", "*", "*", "SBC", "INC", "*"
-            ];
+      // The 56 official opcodes of the 6502
+      let ops = [
+          "BRK", "ORA", "*", "*", "*", "ORA", "ASL", "*", "PHP", "ORA", "ASL", "*", "*", "ORA", "ASL", "*",
+          "BPL", "ORA", "*", "*", "*", "ORA", "ASL", "*", "CLC", "ORA", "*", "*", "*", "ORA", "ASL", "*",
+          "JSR", "AND", "*", "*", "BIT", "AND", "ROL", "*", "PLP", "AND", "ROL", "*", "BIT", "AND", "ROL", "*",
+          "BMI", "AND", "*", "*", "*", "AND", "ROL", "*", "SEC", "AND", "*", "*", "*", "AND", "ROL", "*",
+          "RTI", "EOR", "*", "*", "*", "EOR", "LSR", "*", "PHA", "EOR", "LSR", "*", "JMP", "EOR", "LSR", "*",
+          "BVC", "EOR", "*", "*", "*", "EOR", "LSR", "*", "CLI", "EOR", "*", "*", "*", "EOR", "LSR", "*",
+          "RTS", "ADC", "*", "*", "*", "ADC", "ROR", "*", "PLA", "ADC", "ROR", "*", "JMP", "ADC", "ROR", "*",
+          "BVS", "ADC", "*", "*", "*", "ADC", "ROR", "*", "SEI", "ADC", "*", "*", "*", "ADC", "ROR", "*",
+          "*", "STA", "*", "*", "STY", "STA", "STX", "*", "DEY", "*", "TXA", "*", "STY", "STA", "STX", "*",
+          "BCC", "STA", "*", "*", "STY", "STA", "STX", "*", "TYA", "STA", "TXS", "*", "*", "STA", "*", "*",
+          "LDY", "LDA", "LDX", "*", "LDY", "LDA", "LDX", "*", "TAY", "LDA", "TAX", "*", "LDY", "LDA", "LDX", "*",
+          "BCS", "LDA", "*", "*", "LDY", "LDA", "LDX", "*", "CLV", "LDA", "TSX", "*", "LDY", "LDA", "LDX", "*",
+          "CPY", "CMP", "*", "*", "CPY", "CMP", "DEC", "*", "INY", "CMP", "DEX", "*", "CPY", "CMP", "DEC", "*",
+          "BNE", "CMP", "*", "*", "*", "CMP", "DEC", "*", "CLD", "CMP", "*", "*", "*", "CMP", "DEC", "*",
+          "CPX", "SBC", "*", "*", "CPX", "SBC", "INC", "*", "INX", "SBC", "NOP", "*", "CPX", "SBC", "INC", "*",
+          "BEQ", "SBC", "*", "*", "*", "SBC", "INC", "*", "SED", "SBC", "*", "*", "*", "SBC", "INC", "*"
+      ];
 
-            // Map the addressing modes to the opcodes
-            let modes = [ // Note: imp is used in place of impa, as they're functionally the same for an asm/disasm; no operand.
-                IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IMP, ABS, ABS, IMP, // 0 - 15
-                BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP, // 16
-                ABS, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 32
-                BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP, // 48
-                IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 64
-                BRA, INDY, IMP, IMP, ZP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP, // 80
-                IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IND16, ABS, ABS, IMP, // 96
-                BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP, // 112
-                IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMP, IMP, IMP, ABS, ABS, ABS, IMP, // 128
-                BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, IMP, IMP, // 144
-                IMM, INDX, IMM, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 160
-                BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, ABSX, ABSX, ABSY, IMP, // 176
-                IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 192
-                BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP, // 208
-                IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 224
-                BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP // 240 - 255
-            ];
+      // Map the addressing modes to the opcodes
+      let modes = [ // Note: imp is used in place of impa, as they're functionally the same for an asm/disasm; no operand.
+          IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IMP, ABS, ABS, IMP, // 0 - 15
+          BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP, // 16
+          ABS, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 32
+          BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP, // 48
+          IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 64
+          BRA, INDY, IMP, IMP, ZP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP, // 80
+          IMP, INDX, IMP, IMP, IMP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, IND16, ABS, ABS, IMP, // 96
+          BRA, INDY, IMP, IMP, IMP, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, ABSX, IMP, // 112
+          IMP, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMP, IMP, IMP, ABS, ABS, ABS, IMP, // 128
+          BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, IMP, ABSX, IMP, IMP, // 144
+          IMM, INDX, IMM, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 160
+          BRA, INDY, IMP, IMP, ZPX, ZPX, ZPY, IMP, IMP, ABSY, IMP, IMP, ABSX, ABSX, ABSY, IMP, // 176
+          IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 192
+          BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP, // 208
+          IMM, INDX, IMP, IMP, ZP, ZP, ZP, IMP, IMP, IMM, IMP, IMP, ABS, ABS, ABS, IMP, // 224
+          BRA, INDY, IMP, IMP, ZPX, ZPX, ZPX, IMP, IMP, ABSY, IMP, IMP, ABS, ABSX, ABSX, IMP // 240 - 255
+      ];
 
-            const opcodeMap = {}; // Map to store opcodes by mnemonic and addressing mode
-            for (let i = 0; i < 256; i++) {
-                const op = ops[i],
-                    mode = modes[i]; // Get mnemonic and mode for each opcode index
-                if (op !== "*")(opcodeMap[op] ??= [])[mode] = i; // If valid mnemonic, assign opcode to its mode slot
-            }
+      const opcodeMap = {}; // Map to store opcodes by mnemonic and addressing mode
+      for (let i = 0; i < 256; i++) {
+          const op = ops[i],
+              mode = modes[i]; // Get mnemonic and mode for each opcode index
+          if (op !== "*")(opcodeMap[op] ??= [])[mode] = i; // If valid mnemonic, assign opcode to its mode slot
+      }
 
-            // Compact Simple save function, converts all hex bytes in the assmeble box into decimal bytes, and saves it ------
-            document.getElementById('saveBtn').addEventListener('click', () => {
-                let t = document.getElementById('binIn').value.trim(),
-                    h = t.match(/\b[0-9A-Fa-f]{2}\b/g);
-                if (!t) return alert("No binary data to save.");
-                if (!h || !h.length) return alert("No valid hex bytes found.");
-                saveBinaryFile(new Uint8Array(h.map(b => parseInt(b, 16))), 'binary.bin');
-            });
+      // Compact Simple save function, converts all hex bytes in the assmeble box into decimal bytes, and saves it ------
+      document.getElementById('saveBtn').addEventListener('click', () => {
+          let t = document.getElementById('binIn').value.trim(),
+              h = t.match(/\b[0-9A-Fa-f]{2}\b/g);
+          if (!t) return alert("No binary data to save.");
+          if (!h || !h.length) return alert("No valid hex bytes found.");
+          saveBinaryFile(new Uint8Array(h.map(b => parseInt(b, 16))), 'binary.bin');
+      });
 
-            function saveBinaryFile(b, n = 'output.bin') {
-                let a = document.createElement('a');
-                a.href = URL.createObjectURL(new Blob([b]));
-                a.download = n;
-                a.click();
-                URL.revokeObjectURL(a.href);
-            }
+      function saveBinaryFile(b, n = 'output.bin') {
+          let a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([b]));
+          a.download = n;
+          a.click();
+          URL.revokeObjectURL(a.href);
+      }
 
-            // -----------------------------------------------------------------------------------------------------------------
+      // -----------------------------------------------------------------------------------------------------------------
 
-            let baseAddress = 0xd000; // * = default base address set here
-            const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3; // Returns instruction length by addressing mode
-            const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0"); // Converts number to zero-padded uppercase hex string
+      let baseAddress = 0xd000; // * = default base address set here
+      const len = m => m === BRA ? 2 : m < 3 ? 1 : m < 9 ? 2 : 3; // Returns instruction length by addressing mode
+      const hx = (n, d = 2) => n.toString(16).toUpperCase().padStart(d, "0"); // Converts number to zero-padded uppercase hex string
 
-            function parseNumber(str) { // Parses a string as a number in different bases
-                str = str.trim().toLowerCase();
-                if (str.startsWith('$')) return parseInt(str.slice(1), 16); // Hexadecimal starts with $
-                if (str.startsWith('%')) return parseInt(str.slice(1), 2); // Binary starts with a %
-                return parseInt(str, 10); // Assume decimal by default
-            }
+      function parseNumber(str) { // Parses a string as a number in different bases
+          str = str.trim().toLowerCase();
+          if (str.startsWith('$')) return parseInt(str.slice(1), 16); // Hexadecimal starts with $
+          if (str.startsWith('%')) return parseInt(str.slice(1), 2); // Binary starts with a %
+          return parseInt(str, 10); // Assume decimal by default
+      }
 
-            function pOp(s) { // Parses operand string s and returns addressing mode and value or label info
-                s = s.trim(); // Remove leading and trailing whitespace from the operand string
-                if (!s) return {
-                    m: IMP
-                }; // No operand: implied mode
-                if (s === 'A') return {
-                    m: IMPA
-                }; // Accumulator addressing (No Operand)
-                if (s[0] === '#') return {
-                    m: IMM,
-                    v: parseNumber(s.slice(1))
-                };
-                let m;
-                if ((m = s.match(/^\(([^)]+),X\)$/i))) {
-                    let v = parseNumber(m[1]);
-                    return {
-                        m: INDX,
-                        v
-                    };
-                } // (addr,X) indirect indexed
-                if ((m = s.match(/^\(([^)]+)\),Y$/i))) {
-                    let v = parseNumber(m[1]);
-                    return {
-                        m: INDY,
-                        v
-                    };
-                } // (addr),Y indirect indexed
-                if ((m = s.match(/^\(([^)]+)\)$/i))) { // (addr) indirect
-                    let inner = m[1],
-                        v = /^[\da-f$%]+$/i.test(inner) ? parseNumber(inner) : inner.toUpperCase();
-                    return {
-                        m: IND16,
-                        v
-                    };
-                }
-                if ((m = s.match(/^([^,]+),([XY])$/i))) { // Handle labels with ,X or ,Y indexing (symbolic or numeric)
-                    let val = m[1],
-                        idx = m[2].toUpperCase(),
-                        v = parseNumber(val); // addr,X or addr,Y (can be label or number)
-                    if (isNaN(v)) return {
-                        m: null,
-                        v: {
-                            label: val.toUpperCase(),
-                            index: idx
-                        }
-                    }; // Symbolic label + index - return special object for later resolving
-                    let mode = idx === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY); // Numeric value + index - determine mode immediately
-                    return {
-                        m: mode,
-                        v
-                    };
-                }
-                if (/^[0-9$%]/.test(s)) {
-                    let v = parseNumber(s);
-                    return {
-                        m: v <= 0xFF ? ZP : ABS,
-                        v
-                    };
-                } // Numeric operand, choose zero page or absolute
-                if (/^[a-z_.$][\w.$]*$/i.test(s)) {
-                    return {
-                        m: null,
-                        v: s.toUpperCase()
-                    };
-                } // Label without indexing
-                return {
-                    m: IMP
-                }; // Default to implied mode
-            }
+      function pOp(s, mn) {
+          s = s.trim();
+          if (!s) return {
+              m: IMP
+          };
+          if (s === 'A') return {
+              m: IMPA
+          };
+          if (s[0] === '#') return {
+              m: IMM,
+              v: parseNumber(s.slice(1))
+          };
 
-            window.asm = () => {
-                let lines = document.getElementById("asmIn").value.split("\n"),
-                    labels = {},
-                    pc = 0; // Get lines, init labels & pc
+          let m;
+          if ((m = s.match(/^\(([^)]+),X\)$/i))) {
+              let v = parseNumber(m[1]);
+              return {
+                  m: INDX,
+                  v
+              };
+          }
+          if ((m = s.match(/^\(([^)]+)\),Y$/i))) {
+              let v = parseNumber(m[1]);
+              return {
+                  m: INDY,
+                  v
+              };
+          }
+          if ((m = s.match(/^\(([^)]+)\)$/i))) {
+              let inner = m[1];
+              let v = /^[\da-f$%]+$/i.test(inner) ? parseNumber(inner) : inner.toUpperCase();
+              return {
+                  m: IND16,
+                  v
+              };
+          }
+          if ((m = s.match(/^([^,]+),([XY])$/i))) {
+              let val = m[1],
+                  idx = m[2].toUpperCase(),
+                  v = parseNumber(val);
+              if (isNaN(v)) return {
+                  m: null,
+                  v: {
+                      label: val.toUpperCase(),
+                      index: idx
+                  }
+              };
+              let mode = idx === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY);
+              return {
+                  m: mode,
+                  v
+              };
+          }
+          if (/^[0-9$%]/.test(s)) {
+              let v = parseNumber(s);
+              if (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") {
+                  return {
+                      m: BRA,
+                      v
+                  };
+              }
+              return {
+                  m: v <= 0xFF ? ZP : ABS,
+                  v
+              };
+          }
+          if (/^[a-z_.$][\w.$]*$/i.test(s)) {
+              return {
+                  m: null,
+                  v: s.toUpperCase()
+              };
+          }
+          return {
+              m: IMP
+          };
+      }
 
-                // 1st pass (collect labels & set baseAddress)
-                for (let l of lines) {
-                    l = l.split(";")[0].trim(); // Remove comments & trim
-                    if (!l) continue; // Skip empty or whitespace-only lines
-                    if (/^\*\s*=\s*(.+)$/.test(l)) {
-                        baseAddress = parseNumber(RegExp.$1);
-                        continue;
-                    } // Search for * = (sets base address)
-                    let m = l.match(/^([A-Z0-9_.$]+):/i); // Search for a label at the start of the line
-                    if (m) {
-                        labels[m[1].toUpperCase()] = pc;
-                        l = l.slice(m[0].length).trim();
-                        if (!l) continue;
-                    } // Save label & trim line
-                    let [mn, ...ops] = l.split(/\s+/), {
-                        m: am
-                    } = pOp(ops.join(" ")); // Parse mnemonic and operand mode
-                    if (am == null) am = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS; // Default mode
-                    if (!opcodeMap[mn.toUpperCase()]?.[am]) {
-                        alert(`Bad inst: ${mn} ${ops.join(" ")}`);
-                        return;
-                    } // Invalid opcode
-                    pc += len(am); // Increase pc by instruction length
-                }
+      window.asm = () => {
+          let lines = document.getElementById("asmIn").value.split("\n"),
+              labels = {},
+              pc = 0; // Get lines, init labels & pc
 
-                // 2nd pass (generate machine code)
-                pc = 0;
-                let bytes = [];; // Reset program counter and init output bytes array
-                for (let line of lines) {
-                    line = line.split(";")[0].trim(); // Remove comments & trim
-                    if (!line) continue; // Skip empty lines
+          // 1st pass (collect labels & set baseAddress)
+          for (let l of lines) {
+              l = l.split(";")[0].trim(); // Remove comments & trim
+              if (!l) continue; // Skip empty or whitespace-only lines
+              if (/^\*\s*=\s*(.+)$/.test(l)) {
+                  baseAddress = parseNumber(RegExp.$1);
+                  continue;
+              } // Search for * = (sets base address)
+              let m = l.match(/^([A-Z0-9_.$]+):/i); // Search for a label at the start of the line
+              if (m) {
+                  labels[m[1].toUpperCase()] = pc;
+                  l = l.slice(m[0].length).trim();
+                  if (!l) continue;
+              } // Save label & trim line
+              let [mn, ...ops] = l.split(/\s+/), {
+                  m: am
+              } = pOp(ops.join(" "), mn); // Parse mnemonic and operand mode
+              if (am == null) am = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS; // Default mode
+              if (!opcodeMap[mn.toUpperCase()]?.[am]) {
+                  alert(`Bad inst: ${mn} ${ops.join(" ")}`);
+                  return;
+              } // Invalid opcode
+              pc += len(am); // Increase pc by instruction length
+          }
 
-                    if (/^\*\s*=\s*(.+)$/.test(line)) {
-                        baseAddress = parseNumber(RegExp.$1);
-                        continue;
-                    } // Set base address again
+          // 2nd pass (generate machine code)
+          pc = 0;
+          let bytes = [];; // Reset program counter and init output bytes array
+          for (let line of lines) {
+              line = line.split(";")[0].trim(); // Remove comments & trim
+              if (!line) continue; // Skip empty lines
 
-                    let m = line.match(/^([A-Z0-9_.$]+):/i);
-                    if (m) line = line.slice(m[0].length).trim(); // Remove label
-                    if (!line) continue; // Skip empty lines
-                    let [mn, ...ops] = line.split(/\s+/), op = pOp(ops.join(" ")), lbl, idx, addr;
+              if (/^\*\s*=\s*(.+)$/.test(line)) {
+                  baseAddress = parseNumber(RegExp.$1);
+                  continue;
+              } // Set base address again
 
-                    if (op.v?.label) { // Handle symbolic indexed label
-                        lbl = op.v.label.toUpperCase(); // Get label name in uppercase
-                        if (!(lbl in labels)) return alert(`No label: ${lbl}`); // Label not found
-                        addr = baseAddress + labels[lbl];
-                        idx = op.v.index?.toUpperCase();
-                        op.v = addr; // Set operand to label address and index (if present)
-                        op.m = idx === "X" ? (addr <= 0xFF ? ZPX : ABSX) : idx === "Y" ? (addr <= 0xFF ? ZPY : ABSY) : null;
-                        if (!op.m) return alert(`Invalid index register: ${idx}`); // Alert if addressing mode is missing after index check
-                    } else if (op.m == null || (op.m === IND16 && typeof op.v === "string")) { // Label without index or indirect 16-bit label
-                        lbl = op.v.toUpperCase(); // Convert label name to uppercase for consistency
-                        if (!(lbl in labels)) return alert(`No label: ${lbl}`); // Alert if referenced label is not found
-                        op.v = baseAddress + labels[lbl]; // Resolve label to absolute address
-                        if (op.m == null) op.m = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS; // Set BRA mode for branch ops (Bxx), otherwise set ABS
-                    }
+              let m = line.match(/^([A-Z0-9_.$]+):/i);
+              if (m) line = line.slice(m[0].length).trim(); // Remove label
+              if (!line) continue; // Skip empty lines
+              let [mn, ...ops] = line.split(/\s+/), op = pOp(ops.join(" "), mn), lbl, idx, addr;
 
-                    let opc = opcodeMap[mn.toUpperCase()]?.[op.m]; // Lookup opcode number by mnemonic and addressing mode
-                    if (opc === undefined) return alert(`Bad inst: ${mn} ${ops.join(" ")}`); // Invalid opcode again
-                    bytes[pc++] = opc; // Write opcode
+              if (op.v?.label) { // Handle symbolic indexed label
+                  lbl = op.v.label.toUpperCase(); // Get label name in uppercase
+                  if (!(lbl in labels)) return alert(`No label: ${lbl}`); // Label not found
+                  addr = baseAddress + labels[lbl];
+                  idx = op.v.index?.toUpperCase();
+                  op.v = addr; // Set operand to label address and index (if present)
+                  op.m = idx === "X" ? (addr <= 0xFF ? ZPX : ABSX) : idx === "Y" ? (addr <= 0xFF ? ZPY : ABSY) : null;
+                  if (!op.m) return alert(`Invalid index register: ${idx}`); // Alert if addressing mode is missing after index check
+              } else if (op.m == null || (op.m === IND16 && typeof op.v === "string")) { // Label without index or indirect 16-bit label
+                  lbl = op.v.toUpperCase(); // Convert label name to uppercase for consistency
+                  if (!(lbl in labels)) return alert(`No label: ${lbl}`); // Alert if referenced label is not found
+                  op.v = baseAddress + labels[lbl]; // Resolve label to absolute address
+                  if (op.m == null) op.m = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS; // Set BRA mode for branch ops (Bxx), otherwise set ABS
+              }
 
-                    if ([IMM, ZP, ZPX, ZPY, INDX, INDY].includes(op.m)) bytes[pc++] = op.v & 0xFF; // 1-byte operand
-                    else if ([ABS, ABSX, ABSY, IND16].includes(op.m)) bytes.push(op.v & 0xFF, op.v >> 8), pc += 2; // 2-byte operand
-                    else if (op.m === BRA) { // Calculate branch offset and check range, then store as signed byte
-                        let offset = op.v - (baseAddress + pc + 1);
-                        if (offset < -128 || offset > 127) return alert(`Branch out of range at ${hx(pc - 1)}`);
-                        bytes[pc++] = offset & 0xFF;
-                    }
-                }
+              let opc = opcodeMap[mn.toUpperCase()]?.[op.m]; // Lookup opcode number by mnemonic and addressing mode
+              if (opc === undefined) return alert(`Bad inst: ${mn} ${ops.join(" ")}`); // Invalid opcode again
+              bytes[pc++] = opc; // Write opcode
 
-                let hexBytes = bytes.slice(0, pc).map(b => hx(b)); // Convert bytes to hex strings
-                document.getElementById("binIn").value = hexBytes.join(" "); // Join all with spaces only
-                for (let i = 0; i < hexBytes.length; i += 16) outLines.push(hexBytes.slice(i, i + 16).join(" ")); // Split lines
-                document.getElementById("binIn").value = outLines.join("\n"); // Output hex to input box
+              if ([IMM, ZP, ZPX, ZPY, INDX, INDY].includes(op.m)) bytes[pc++] = op.v & 0xFF; // 1-byte operand
+              else if ([ABS, ABSX, ABSY, IND16].includes(op.m)) bytes.push(op.v & 0xFF, op.v >> 8), pc += 2; // 2-byte operand
+              else if (op.m === BRA) { // Calculate branch offset and check range, then store as signed byte
+                  let offset = op.v - (baseAddress + pc + 1);
+                  if (offset < -128 || offset > 127) return alert(`Branch out of range at ${hx(pc - 1)}`);
+                  bytes[pc++] = offset & 0xFF;
+              }
+          }
+
+          let hexBytes = bytes.slice(0, pc).map(b => hx(b)); // Convert bytes to hex strings
+          document.getElementById("binIn").value = hexBytes.join(" "); // Join all with spaces only
+          for (let i = 0; i < hexBytes.length; i += 16) outLines.push(hexBytes.slice(i, i + 16).join(" ")); // Split lines
+          document.getElementById("binIn").value = outLines.join("\n"); // Output hex to input box
 
 
-            };
+      };
 
-            window.dis = () => { // Disassembler
-                let pc = 0,
-                    lst = []; // Reset program counter and output list
-                let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16)); // Parse hex input from field into array of numbers
-                if (bin.length > 0) {
-                    lst.push(`* = $${baseAddress.toString(16).padStart(4, "0").toUpperCase()}`);
-                } // Add origin directive only if input is not empty
-                while (pc < bin.length) { // Iterate through binary data
+      window.dis = () => { // Disassembler
+          let pc = 0,
+              lst = []; // Reset program counter and output list
+          let bin = document.getElementById("binIn").value.trim().split(/[\s,]+/).filter(Boolean).map(b => parseInt(b, 16)); // Parse hex input from field into array of numbers
+          if (bin.length > 0) {
+              lst.push(`* = $${baseAddress.toString(16).padStart(4, "0").toUpperCase()}`);
+          } // Add origin directive only if input is not empty
+          while (pc < bin.length) { // Iterate through binary data
 
-                    let addr = baseAddress + pc;
-                    let o = bin[pc],
-                        m = modes[o],
-                        mn = ops[o];
-                    let bytes = [o];
+              let addr = baseAddress + pc;
+              let o = bin[pc],
+                  m = modes[o],
+                  mn = ops[o];
+              let bytes = [o];
 
-                    if (mn === "*") { // Falls back to raw bytes as .db because it's a non-opcode
-                        let h = hx(o).padStart(2, "0"),
-                            a = addr.toString(16).padStart(4, "0").toUpperCase();
-                        lst.push(`${a}   ${h}                   .db $${h}`);
-                        pc++;
-                        continue;
-                    }
-                    let ln = len(m); // Falls back to .db because the instruction length exceeds remaining bytes
-                    if (pc + ln - 1 >= bin.length) { // Check if instruction would exceed binary length
-                        let h = hx(o).padStart(2, "0"),
-                            a = addr.toString(16).padStart(4, "0").toUpperCase();
-                        lst.push(`${a}   ${h}                   .db $${h}`);
-                        pc++;
-                        continue;
-                    }
+              if (mn === "*") { // Falls back to raw bytes as .db because it's a non-opcode
+                  let h = hx(o).padStart(2, "0"),
+                      a = addr.toString(16).padStart(4, "0").toUpperCase();
+                  lst.push(`${a}   ${h}                   .db $${h}`);
+                  pc++;
+                  continue;
+              }
+              let ln = len(m); // Falls back to .db because the instruction length exceeds remaining bytes
+              if (pc + ln - 1 >= bin.length) { // Check if instruction would exceed binary length
+                  let h = hx(o).padStart(2, "0"),
+                      a = addr.toString(16).padStart(4, "0").toUpperCase();
+                  lst.push(`${a}   ${h}                   .db $${h}`);
+                  pc++;
+                  continue;
+              }
 
-                    for (let i = 1; i < ln; i++) bytes.push(bin[pc + i]); // Collect operand bytes based on instruction length
-                    let opd = ""; // Initialize addressing mode string
+              for (let i = 1; i < ln; i++) bytes.push(bin[pc + i]); // Collect operand bytes based on instruction length
+              let opd = ""; // Initialize addressing mode string
 
-                    switch (m) { // Note, IMPA is not implmented as IMP and IMPA both refer to opcodes without operands, but it could be easily added.
-                        case IMP:
-                            opd = "";
-                            break; // Implied addressing mode (no operand)
-                        case IMM:
-                            opd = "#$" + hx(bin[pc + 1]);
-                            break; // Immediate value (e.g., #$10)
-                        case ZP:
-                            opd = "$" + hx(bin[pc + 1]);
-                            break;
-                        case ZPX:
-                            opd = "$" + hx(bin[pc + 1]) + ",X";
-                            break;
-                        case ZPY:
-                            opd = "$" + hx(bin[pc + 1]) + ",Y";
-                            break;
-                        case ABS:
-                            opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2);
-                            break;
-                        case ABSX:
-                            opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ",X";
-                            break;
-                        case ABSY:
-                            opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ",Y";
-                            break;
-                        case INDX:
-                            opd = "($" + hx(bin[pc + 1]) + ",X)";
-                            break;
-                        case INDY:
-                            opd = "($" + hx(bin[pc + 1]) + "),Y";
-                            break;
-                        case IND16:
-                            opd = "($" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ")";
-                            break;
-                        case BRA:
-                            let off = bin[pc + 1];
-                            if (off & 0x80) off -= 0x100;
-                            opd = "$" + hx(baseAddress + pc + 2 + off, 4);
-                            break; // Relative branch offset, convert to signed if needed, calculate target address
-                    }
+              switch (m) { // Note, IMPA is not implmented as IMP and IMPA both refer to opcodes without operands, but it could be easily added.
+                  case IMP:
+                      opd = "";
+                      break; // Implied addressing mode (no operand)
+                  case IMM:
+                      opd = "#$" + hx(bin[pc + 1]);
+                      break; // Immediate value (e.g., #$10)
+                  case ZP:
+                      opd = "$" + hx(bin[pc + 1]);
+                      break;
+                  case ZPX:
+                      opd = "$" + hx(bin[pc + 1]) + ",X";
+                      break;
+                  case ZPY:
+                      opd = "$" + hx(bin[pc + 1]) + ",Y";
+                      break;
+                  case ABS:
+                      opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2);
+                      break;
+                  case ABSX:
+                      opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ",X";
+                      break;
+                  case ABSY:
+                      opd = "$" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ",Y";
+                      break;
+                  case INDX:
+                      opd = "($" + hx(bin[pc + 1]) + ",X)";
+                      break;
+                  case INDY:
+                      opd = "($" + hx(bin[pc + 1]) + "),Y";
+                      break;
+                  case IND16:
+                      opd = "($" + hx(bin[pc + 2], 2) + hx(bin[pc + 1], 2) + ")";
+                      break;
+                  case BRA:
+                      let off = bin[pc + 1];
+                      if (off & 0x80) off -= 0x100;
+                      opd = "$" + hx(baseAddress + pc + 2 + off, 4);
+                      break; // Relative branch offset, convert to signed if needed, calculate target address
+              }
 
-                    let hexBytes = bytes.map(b => hx(b).padStart(2, "0")).join(" "); // Convert bytes to hex string for left side
-                    let paddedHex = hexBytes.padEnd(10, " "); // Padding to keep everything aligned
-                    lst.push(`${addr.toString(16).padStart(4, "0").toUpperCase()}   ${paddedHex} ${mn}${opd ? " " + opd : ""}`);
-                    pc += ln; // Advance program counter by opcode length  
-                }
-                document.getElementById("binOut").textContent = lst.join("\n"); // Output final disassembly to the output field
-            };
+              let hexBytes = bytes.map(b => hx(b).padStart(2, "0")).join(" "); // Convert bytes to hex string for left side
+              let paddedHex = hexBytes.padEnd(10, " "); // Padding to keep everything aligned
+              lst.push(`${addr.toString(16).padStart(4, "0").toUpperCase()}   ${paddedHex} ${mn}${opd ? " " + opd : ""}`);
+              pc += ln; // Advance program counter by opcode length  
+          }
+          document.getElementById("binOut").textContent = lst.join("\n"); // Output final disassembly to the output field
+      };
 
-        })();
+  })();
     </script>
 </body>
 </html>
