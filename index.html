@@ -4,108 +4,120 @@
 <head>
 
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>Tiny 6502 Assembler/Disassembler</title>
-    <style>
-        body {
-            background: #1e1e2f;
-            color: #e0e0e0;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            padding: 2em;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            text-align: center;
-            width: 100%;
-            overflow-x: hidden;
-        }
+  <style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }  
 
-        h1 {
-            font-size: 1.5rem;
-            max-width: 100%;
-            word-wrap: break-word;
-            margin-bottom: 0.5em;
-            text-align: center;
+ body {
+    min-height: 100vh;  /* Ensures body is at least full viewport height */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #1e1e2f;
+    color: #e0e0e0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    width: 100vw;
+    overflow-x: hidden;
+    padding: 2em;
+    text-align: center;
+}
+
+    h1 {
+        font-size: 1.5rem;
+        max-width: 100%;
+        word-wrap: break-word;
+        margin-bottom: 1.em; /* Here */
+        text-align: center;
+    }
+
+    .container {
+        max-width: 800px;
+        width: 100%;
+        margin: 0 auto 2em;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    textarea,
+    pre {
+        width: 100%;
+        max-width: 800px;
+        min-width: 280px;
+        background: #2a2a3d;
+        color: #e8e8e8;
+        border: 1px solid #444;
+        padding: 1em;
+        box-sizing: border-box;
+        font-family: "Courier New", Courier, monospace;
+        resize: vertical;
+        margin-bottom: 1.5em;
+        text-align: left;
+        font-size: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    button {
+        background: #5b8dfc;
+        color: #fff;
+        border: none;
+        padding: 0.6em 2em;
+        margin: 1em auto;
+        cursor: pointer;
+        transition: 0.3s;
+        font-size: 1rem;
+        border-radius: 6px;
+        box-shadow: 0 4px 10px rgba(91, 141, 252, 0.3);
+        display: block;
+    }
+
+    button:hover {
+        background: #3f72d1;
+    }
+
+    @media (max-width: 600px) {
+        body {
+            padding: 1em;
         }
 
         textarea,
         pre {
-            width: 100%;
-            max-width: 800px;
-            background: #2a2a3d;
-            color: #e8e8e8;
-            border: 1px solid #444;
-            padding: 1em;
-            box-sizing: border-box;
-            font-family: "Courier New", Courier, monospace;
-            resize: vertical;
-            margin-bottom: 1.5em;
-            text-align: left;
-            font-size: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            font-size: 0.9rem;
         }
 
         button {
-            background: #5b8dfc;
-            color: #fff;
-            border: none;
-            padding: 0.6em 2em;
-            margin: 1em auto;
-            cursor: pointer;
-            transition: 0.3s;
-            font-size: 1rem;
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(91, 141, 252, 0.3);
+            font-size: 0.9rem;
+            padding: 0.5em 1.5em;
         }
+    }
 
-        button:hover {
-            background: #3f72d1;
-        }
+    #saveBtn {
+        position: fixed;
+        bottom: 1em;
+        right: 1em;
+        margin: 0;
+        z-index: 1000;
+        background: #00bfa6;
+        box-shadow: 0 3px 12px rgba(0, 191, 166, 0.3);
+    }
 
-        .container {
-            margin-bottom: 2em;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    #saveBtn:hover {
+        background: #009e87;
+    }
+</style>
 
-        @media (max-width:600px) {
-            body {
-                padding: 1em;
-            }
-
-            textarea,
-            pre {
-                font-size: 0.95rem;
-            }
-
-            button {
-                font-size: 0.95rem;
-                padding: 0.5em 1.5em;
-            }
-        }
-
-        #saveBtn {
-            position: fixed;
-            bottom: 1em;
-            right: 1em;
-            margin: 0;
-            z-index: 1000;
-            background: #00bfa6;
-            box-shadow: 0 3px 12px rgba(0, 191, 166, 0.3);
-        }
-
-        #saveBtn:hover {
-            background: #009e87;
-        }
-    </style>
 </head>
 
 <body>
     <h1>Tiny 6502 Assembler/Disassembler</h1>
-    <div class=container><textarea id="asmIn" rows="22" spellcheck="false" autofocus>
+    <div class=container><textarea id="asmIn" rows="18" spellcheck="false" autofocus>
 ; This is example code, feel free to modify it or enter your own.  
 ; Alternatively, you can use the disassembly box below  
 ; by inputting hexadecimal bytes, separated by spaces.
@@ -130,11 +142,14 @@ LDA ($40),Y      ; Indirect Indexed (Y)
         <button onclick="asm()">Assemble</button>
     </div>
     <div class="container">
-        <textarea id="binIn" rows="22" spellcheck="false"></textarea>
+        <textarea id="binIn" rows="18" spellcheck="false"></textarea>
         <button onclick="dis()">Disassemble</button>
         <button id="saveBtn">Save Binary</button>
         <pre id="binOut" aria-live="polite" role="region"></pre>
+           <div style="height: 50px;"></div>
     </div>
+
+ 
     <script>
         (() => {
             // Supports all 56 official 6502 *instructions* (151 opcodes including addressing modes).
@@ -459,5 +474,4 @@ LDA ($40),Y      ; Indirect Indexed (Y)
         })();
     </script>
 </body>
-
 </html>
