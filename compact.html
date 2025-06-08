@@ -127,16 +127,9 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   if (!s) return { m: IMP };
   if (s === 'A') return { m: IMPA };
   if (s[0] === '#') return { m: IMM, v: parseNumber(s.slice(1)) };
-  
   let m;
-  if ((m = s.match(/^\(([^)]+),X\)$/i))) {
-    let v = parseNumber(m[1]);
-    return { m: INDX, v };
-  }
-  if ((m = s.match(/^\(([^)]+)\),Y$/i))) {
-    let v = parseNumber(m[1]);
-    return { m: INDY, v };
-  }
+  if ((m = s.match(/^\(([^)]+),X\)$/i))) { let v = parseNumber(m[1]); return { m: INDX, v }; }
+  if ((m = s.match(/^\(([^)]+)\),Y$/i))) { let v = parseNumber(m[1]); return { m: INDY, v }; }
   if ((m = s.match(/^\(([^)]+)\)$/i))) {
     let inner = m[1];
     let v = /^[\da-f$%]+$/i.test(inner) ? parseNumber(inner) : inner.toUpperCase();
@@ -150,45 +143,16 @@ LDA ($40),Y      ; Indirect Indexed (Y)
   }
   if (/^[0-9$%]/.test(s)) {
     let v = parseNumber(s);
-    if (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") {
-      return { m: BRA, v };
-    }
+    if (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") { return { m: BRA, v }; }
     return { m: v <= 0xFF ? ZP : ABS, v };
   }
-  if (/^[a-z_.$][\w.$]*$/i.test(s)) {
-    return { m: null, v: s.toUpperCase() };
-  }
+  if (/^[a-z_.$][\w.$]*$/i.test(s)) { return { m: null, v: s.toUpperCase() }; }
   return { m: IMP };
-}
-
-
-function oldpOp(s) { // Parses operand string s and returns addressing mode and value or label info
-  s = s.trim();                      // Remove leading and trailing whitespace from the operand string
-  if (!s) return { m: IMP };         // No operand: implied mode
-  if (s === 'A') return { m: IMPA }; // Accumulator addressing (No Operand)
-  if (s[0] === '#') return { m: IMM, v: parseNumber(s.slice(1)) };
-  let m;
-  if ((m = s.match(/^\(([^)]+),X\)$/i))) { let v = parseNumber(m[1]); return { m: INDX, v }; } // (addr,X) indirect indexed
-  if ((m = s.match(/^\(([^)]+)\),Y$/i))) { let v = parseNumber(m[1]); return { m: INDY, v }; } // (addr),Y indirect indexed
-  if ((m = s.match(/^\(([^)]+)\)$/i))) { // (addr) indirect
-    let inner = m[1], v = /^[\da-f$%]+$/i.test(inner) ? parseNumber(inner) : inner.toUpperCase();
-    return { m: IND16, v };
-  }
-  if ((m = s.match(/^([^,]+),([XY])$/i))) { // Handle labels with ,X or ,Y indexing (symbolic or numeric)
-    let val = m[1], idx = m[2].toUpperCase(), v = parseNumber(val); // addr,X or addr,Y (can be label or number)
-    if (isNaN(v)) return { m: null, v: { label: val.toUpperCase(), index: idx } }; // Symbolic label + index - return special object for later resolving
-    let mode = idx === 'X' ? (v <= 0xFF ? ZPX : ABSX) : (v <= 0xFF ? ZPY : ABSY);  // Numeric value + index - determine mode immediately
-    return { m: mode, v };
-  }
-  // Parses OPerands (numbers of different bases) e.g. this will parse numeric operands like $C000 as { m: ABS, v: 0xC000 }
-  if (/^[0-9$%]/.test(s)) { let v = parseNumber(s); return { m: v <= 0xFF ? ZP : ABS, v }; }  // Numeric operand, choose zero page or absolute
-  if (/^[a-z_.$][\w.$]*$/i.test(s)) { return { m: null, v: s.toUpperCase() }; }               // Label without indexing
-  return { m: IMP }; // Default to implied mode
 }
 
 window.asm = () => {
   let lines = document.getElementById("asmIn").value.split("\n"), labels = {}, pc = 0; // Get lines, init labels & pc
- 
+
   // 1st pass (collect labels & set baseAddress)
   for (let l of lines) { 
     l = l.split(";")[0].trim(); // Remove comments & trim
