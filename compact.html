@@ -198,8 +198,8 @@ window.asm = () => {
       bytes[pc++] = offset & 0xFF;
     }
   }
-
-  let hexBytes = bytes.slice(0, pc).map(b => hx(b)), outLines = []; // Convert bytes to hex strings
+  let hexBytes = bytes.slice(0, pc).map(b => hx(b)); // Convert bytes to hex strings
+  document.getElementById("binIn").value = hexBytes.join(" "); // Join all with spaces only
   for (let i = 0; i < hexBytes.length; i += 16) outLines.push(hexBytes.slice(i, i + 16).join(" ")); // Split lines
   document.getElementById("binIn").value = outLines.join("\n"); // Output hex to input box
 };
