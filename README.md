@@ -8,13 +8,14 @@ It's designed for educational purposes, experimenting, retro computing enthusias
 ## Features
 
 - Assemble 6502 assembly code into binary machine code
-- Disassemble 6502 machine code into readable assembly
+- Disassemble 6502 machine code back into readable assembly
 - Supports the full standard 6502 instruction set
 - Case-insensitive parsing of instructions and directives
 - Supports labels
 - Supports comments
 - Supports decimal, hexadecimal, and binary number formats for values and addresses
 - Lightweight and easy to use
+- Optimized for mobile devices with a touch-friendly interface for convenient on-the-go use
 - Written in pure JavaScript, no external dependencies
 
 > ⚠️ **Work in Progress:** This project is under active development and may contain bugs or incomplete features. Use with caution and feel free to contribute improvements or bug fixes.
