@@ -350,30 +350,46 @@ LDA ($40),Y      ; Indirect Indexed (Y)
               labels = {},
               pc = 0; // Get lines, init labels & pc
 
-          // 1st pass (collect labels & set baseAddress)
-          for (let l of lines) {
-              l = l.split(";")[0].trim(); // Remove comments & trim
-              if (!l) continue; // Skip empty or whitespace-only lines
-              if (/^\*\s*=\s*(.+)$/.test(l)) {
-                  baseAddress = parseNumber(RegExp.$1);
-                  continue;
-              } // Search for * = (sets base address)
-              let m = l.match(/^([A-Z0-9_.$]+):/i); // Search for a label at the start of the line
-              if (m) {
-                  labels[m[1].toUpperCase()] = pc;
-                  l = l.slice(m[0].length).trim();
-                  if (!l) continue;
-              } // Save label & trim line
-              let [mn, ...ops] = l.split(/\s+/), {
-                  m: am
-              } = pOp(ops.join(" "), mn); // Parse mnemonic and operand mode
-              if (am == null) am = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS; // Default mode
-              if (!opcodeMap[mn.toUpperCase()]?.[am]) {
-                  alert(`Bad inst: ${mn} ${ops.join(" ")}`);
-                  return;
-              } // Invalid opcode
-              pc += len(am); // Increase pc by instruction length
-          }
+            // 1st pass: collect labels & set baseAddress
+            for (let line of lines) {
+            // Strip comments and whitespace
+            line = line.split(";")[0].trim();
+            if (!line) continue;
+
+            // Handle base address setting
+            const baseMatch = line.match(/^\*\s*=\s*(.+)$/);
+            if (baseMatch) {
+                baseAddress = parseNumber(baseMatch[1]);
+                continue;
+            }
+
+            // Extract label if present
+            const labelMatch = line.match(/^([A-Z0-9_.$]+):/i);
+            if (labelMatch) {
+                labels[labelMatch[1].toUpperCase()] = pc;
+                line = line.slice(labelMatch[0].length).trim();
+                if (!line) continue;
+            }
+
+            // Parse mnemonic and operand mode
+            const [mnemonic, ...operands] = line.split(/\s+/);
+            let { m: addressingMode } = pOp(operands.join(" "), mnemonic);
+
+            // Assign default addressing mode if missing
+            if (addressingMode == null) {
+                const upperMnemonic = mnemonic.toUpperCase();
+                addressingMode = (upperMnemonic.startsWith("B") && upperMnemonic !== "BIT") ? BRA : ABS;
+            }
+
+            // Validate opcode exists for the addressing mode
+            if (!(addressingMode in (opcodeMap[mnemonic.toUpperCase()] ?? {}))) {
+                alert(`Bad inst(pass1): ${mnemonic} ${operands.join(" ")}`);
+                return;
+            }
+
+            // Increment program counter
+            pc += len(addressingMode);
+            }
 
           // 2nd pass (generate machine code)
           pc = 0;

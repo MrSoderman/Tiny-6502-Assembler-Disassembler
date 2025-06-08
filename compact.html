@@ -198,7 +198,7 @@ window.asm = () => {
     if (m) { labels[m[1].toUpperCase()] = pc; l = l.slice(m[0].length).trim(); if (!l) continue; } // Save label & trim line
     let [mn, ...ops] = l.split(/\s+/), { m: am } = pOp(ops.join(" "), mn); // Parse mnemonic and operand mode
     if (am == null) am = (mn.toUpperCase().startsWith("B") && mn.toUpperCase() !== "BIT") ? BRA : ABS; // Default mode
-    if (!opcodeMap[mn.toUpperCase()]?.[am]) { alert(`Bad inst: ${mn} ${ops.join(" ")}`); return; } // Invalid opcode
+    if (!(am in (opcodeMap[mn.toUpperCase()] ?? {}))) { alert(`Bad inst(pass1): ${mn} ${ops.join(" ")}`); return; }
     pc += len(am); // Increase pc by instruction length
   }
   
