@@ -30,6 +30,9 @@ Below is a screenshot demonstrating the assembler in use:
 
 ![6502 Assembler Screenshot](images/Screenshot.png)
 
+## Live demo:
+[https://mrsoderman.github.io/Tiny-6502-Assembler-Disassembler/](https://mrsoderman.github.io/Tiny-6502-Assembler-Disassembler/)
+
 ## Resources
 
 These resources were useful during development and might help you understand or extend this project:
